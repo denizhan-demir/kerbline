@@ -41,12 +41,12 @@ def get_races():
         quali_local = quali_utc.astimezone(budapest)
 
         if local_time < now:
-            status = "✓"
+            status = "done"
         elif not next_found:
-            status = "→"
+            status = "next"
             next_found = True
         else:
-            status = ""
+            status = "upcoming"
 
         result.append({
             "status": status,
