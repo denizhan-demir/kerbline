@@ -9,6 +9,21 @@ URL = "https://api.jolpi.ca/ergast/f1/current.json"
 cached_races = None
 cached_at = None
 
+BUDAPEST = ZoneInfo("Europe/Budapest")
+
+SESSIONS = [
+    ("FirstPractice", "Practice 1"),
+    ("SecondPractice", "Practice 2"),
+    ("ThirdPractice", "Practice 3"),
+    ("SprintQualifying", "Sprint Qualifying"),
+    ("Sprint", "Sprint"),
+    ("Qualifying", "Qualifying"),
+]
+
+def to_local(session):
+    utc_time = datetime.fromisoformat(session["date"] + "T" + session["time"])
+    return utc_time.astimezone(BUDAPEST)
+
 def fetch_races():
     global cached_races, cached_at
     if cached_races is None or datetime.now() - cached_at > timedelta(hours=1):
@@ -26,21 +41,14 @@ def fetch_races():
 
 def get_races():
     races = fetch_races()
-    budapest = ZoneInfo("Europe/Budapest")
-    now = datetime.now(budapest)
-
-    budapest = ZoneInfo("Europe/Budapest")
-    now = datetime.now(budapest)
+    now = datetime.now(BUDAPEST)
     next_found = False
     result = []
 
     for race in races:
-        utc_time = datetime.fromisoformat(race["date"] + "T" + race["time"])
-        local_time = utc_time.astimezone(budapest)
-        quali_utc = datetime.fromisoformat(race["Qualifying"]["date"] + "T" + race["Qualifying"]["time"])
-        quali_local = quali_utc.astimezone(budapest)
+        race_time = to_local(race)
 
-        if local_time < now:
+        if race_time < now:
             status = "done"
         elif not next_found:
             status = "next"
@@ -48,13 +56,19 @@ def get_races():
         else:
             status = "upcoming"
 
+        sessions = []
+        for key, label in SESSIONS:
+            if key in race:
+                sessions.append({"name": label, "time": to_local(race[key]).strftime("%a %d.%m %H:%M")})
+        sessions.append({"name": "Race", "time": race_time.strftime("%a %d.%m %H:%M")})
+
         result.append({
             "status": status,
             "round": race["round"],
             "name": race["raceName"],
             "country": race["Circuit"]["Location"]["country"],
-            "quali": quali_local.strftime("%d.%m %H:%M"),
-            "race": local_time.strftime("%d.%m.%Y %H:%M"),
+            "date": race_time.strftime("%d.%m.%Y"),
+            "sessions": sessions,
         })
 
     return result
