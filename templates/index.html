@@ -8,7 +8,12 @@
 </head>
 <body>
     <h1>F1 Calendar</h1>
-    <p class="note">All times are Budapest time.</p>
+
+    <div class="toggle">
+        <button id="btn-yours" class="active">Your time</button>
+        <button id="btn-track">Track time</button>
+    </div>
+    <p class="note" id="tz-note"></p>
 
     {% for race in races %}
     <details class="race {{ race.status }}" {% if race.status == "next" %}open{% endif %}>
@@ -16,14 +21,61 @@
             <span class="round">{{ race.round }}</span>
             <span class="name">{{ race.name }} <small>{{ race.country }}</small></span>
             {% if race.status == "next" %}<span class="badge">NEXT</span>{% endif %}
-            <span class="date">{{ race.date }}</span>
+            <span class="date" data-utc="{{ race.utc }}" data-tz="{{ race.tz }}" data-format="date"></span>
         </summary>
         <ul class="sessions">
             {% for session in race.sessions %}
-            <li><span>{{ session.name }}</span><span>{{ session.time }}</span></li>
+            <li><span>{{ session.name }}</span><span data-utc="{{ session.utc }}" data-tz="{{ race.tz }}"></span></li>
             {% endfor %}
         </ul>
     </details>
     {% endfor %}
+
+    <script>
+        let mode = "yours";
+
+        function formatTime(utc, timeZone, dateOnly) {
+            let options;
+            if (dateOnly) {
+                options = { day: "2-digit", month: "2-digit", year: "numeric" };
+            } else {
+                options = { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" };
+            }
+            if (timeZone) {
+                options.timeZone = timeZone;
+            }
+            return new Date(utc).toLocaleString("en-GB", options);
+        }
+
+        function render() {
+            const elements = document.querySelectorAll("[data-utc]");
+            for (const el of elements) {
+                const timeZone = mode === "track" ? el.dataset.tz : null;
+                el.textContent = formatTime(el.dataset.utc, timeZone, el.dataset.format === "date");
+            }
+
+            document.getElementById("btn-yours").classList.toggle("active", mode === "yours");
+            document.getElementById("btn-track").classList.toggle("active", mode === "track");
+
+            const note = document.getElementById("tz-note");
+            if (mode === "yours") {
+                note.textContent = "Times in your time zone (" + Intl.DateTimeFormat().resolvedOptions().timeZone + ")";
+            } else {
+                note.textContent = "Times in each circuit's local time";
+            }
+        }
+
+        document.getElementById("btn-yours").addEventListener("click", function () {
+            mode = "yours";
+            render();
+        });
+
+        document.getElementById("btn-track").addEventListener("click", function () {
+            mode = "track";
+            render();
+        });
+
+        render();
+    </script>
 </body>
 </html>

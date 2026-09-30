@@ -61,3 +61,21 @@ h1 {
     justify-content: space-between;
     padding: 6px 0;
 }
+
+.toggle { display: flex; gap: 8px; margin-bottom: 8px; }
+
+.toggle button {
+    background: #1f1f2b;
+    color: var(--muted);
+    border: 1px solid #2c2c3a;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font: inherit;
+}
+
+.toggle button.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}

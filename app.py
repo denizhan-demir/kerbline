@@ -1,6 +1,6 @@
 import requests
-from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
+from datetime import datetime, timedelta, timezone
+from timezonefinder import TimezoneFinder
 from flask import Flask, render_template
 
 app = Flask(__name__)
@@ -8,8 +8,6 @@ app = Flask(__name__)
 URL = "https://api.jolpi.ca/ergast/f1/current.json"
 cached_races = None
 cached_at = None
-
-BUDAPEST = ZoneInfo("Europe/Budapest")
 
 SESSIONS = [
     ("FirstPractice", "Practice 1"),
@@ -20,9 +18,14 @@ SESSIONS = [
     ("Qualifying", "Qualifying"),
 ]
 
-def to_local(session):
-    utc_time = datetime.fromisoformat(session["date"] + "T" + session["time"])
-    return utc_time.astimezone(BUDAPEST)
+tf = TimezoneFinder()
+
+def parse_time(session):
+    return datetime.fromisoformat(session["date"] + "T" + session["time"])
+
+def track_timezone(race):
+    location = race["Circuit"]["Location"]
+    return tf.timezone_at(lng=float(location["long"]), lat=float(location["lat"])) or ""
 
 def fetch_races():
     global cached_races, cached_at
@@ -41,12 +44,12 @@ def fetch_races():
 
 def get_races():
     races = fetch_races()
-    now = datetime.now(BUDAPEST)
+    now = datetime.now(timezone.utc)
     next_found = False
     result = []
 
     for race in races:
-        race_time = to_local(race)
+        race_time = parse_time(race)
 
         if race_time < now:
             status = "done"
@@ -59,15 +62,16 @@ def get_races():
         sessions = []
         for key, label in SESSIONS:
             if key in race:
-                sessions.append({"name": label, "time": to_local(race[key]).strftime("%a %d.%m %H:%M")})
-        sessions.append({"name": "Race", "time": race_time.strftime("%a %d.%m %H:%M")})
+                sessions.append({"name": label, "utc": parse_time(race[key]).isoformat()})
+        sessions.append({"name": "Race", "utc": race_time.isoformat()})
 
         result.append({
             "status": status,
             "round": race["round"],
             "name": race["raceName"],
             "country": race["Circuit"]["Location"]["country"],
-            "date": race_time.strftime("%d.%m.%Y"),
+            "utc": race_time.isoformat(),
+            "tz": track_timezone(race),
             "sessions": sessions,
         })
 
