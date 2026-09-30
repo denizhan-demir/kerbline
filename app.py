@@ -1,15 +1,27 @@
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from flask import Flask, render_template
 
 app = Flask(__name__)
 
+URL = "https://api.jolpi.ca/ergast/f1/current.json"
+cached_races = None
+cached_at = None
+
+def fetch_races():
+    global cached_races, cached_at
+    if cached_races is None or datetime.now() - cached_at > timedelta(hours=1):
+        print("Fetching from API...")
+        response = requests.get(URL, timeout=10)
+        cached_races = response.json()["MRData"]["RaceTable"]["Races"]
+        cached_at = datetime.now()
+    return cached_races
+
 def get_races():
-    url = "https://api.jolpi.ca/ergast/f1/current.json"
-    response = requests.get(url)
-    data = response.json()
-    races = data["MRData"]["RaceTable"]["Races"]
+    races = fetch_races()
+    budapest = ZoneInfo("Europe/Budapest")
+    now = datetime.now(budapest)
 
     budapest = ZoneInfo("Europe/Budapest")
     now = datetime.now(budapest)
