@@ -12,10 +12,16 @@ cached_at = None
 def fetch_races():
     global cached_races, cached_at
     if cached_races is None or datetime.now() - cached_at > timedelta(hours=1):
-        print("Fetching from API...")
-        response = requests.get(URL, timeout=10)
-        cached_races = response.json()["MRData"]["RaceTable"]["Races"]
-        cached_at = datetime.now()
+        try:
+            print("Fetching from API...")
+            response = requests.get(URL, timeout=10)
+            response.raise_for_status()
+            cached_races = response.json()["MRData"]["RaceTable"]["Races"]
+            cached_at = datetime.now()
+        except requests.RequestException:
+            print("API request failed")
+            if cached_races is None:
+                raise
     return cached_races
 
 def get_races():
@@ -55,7 +61,10 @@ def get_races():
 
 @app.route("/")
 def home():
-    races = get_races()
+    try:
+        races = get_races()
+    except Exception:
+        return "<h1>F1 Calendar</h1><p>Calendar data is unavailable right now. Please try again later.</p>", 503
     return render_template("index.html", races=races)
 
 @app.route("/about")
