@@ -20,12 +20,12 @@ for race in races:
 
     country = race["Circuit"]["Location"]["country"]
     if local_time < now:
-        status = "✓"
+        status = "Done"
     elif not next_found:
-        status = "→"
+        status = "Next"
         next_found = True
     else:
-        status = " "
+        status = "Upcoming"
     print(status, race["round"], race["raceName"], country,
           "| Quali:", quali_local.strftime("%d.%m %H:%M"),
           "| Race:", local_time.strftime("%d.%m.%Y %H:%M"))

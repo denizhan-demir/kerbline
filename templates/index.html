@@ -2,7 +2,9 @@
 <html>
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>F1 Calendar</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <h1>F1 Calendar</h1>
@@ -11,8 +13,8 @@
             <th></th><th>#</th><th>Grand Prix</th><th>Country</th><th>Qualifying</th><th>Race</th>
         </tr>
         {% for race in races %}
-        <tr>
-            <td>{{ race.status }}</td>
+        <tr class="{{ race.status }}">
+            <td>{% if race.status == "done" %}✓{% elif race.status == "next" %}NEXT{% endif %}</td>
             <td>{{ race.round }}</td>
             <td>{{ race.name }}</td>
             <td>{{ race.country }}</td>
