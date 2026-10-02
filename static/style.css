@@ -79,3 +79,19 @@ h1 {
     color: white;
     border-color: var(--accent);
 }
+
+.seasons { display: flex; gap: 8px; margin-bottom: 16px; }
+
+.seasons a {
+    color: var(--muted);
+    text-decoration: none;
+    padding: 6px 12px;
+    border: 1px solid #2c2c3a;
+    border-radius: 6px;
+}
+
+.seasons a.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
