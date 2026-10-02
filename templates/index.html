@@ -1,13 +1,19 @@
 <!DOCTYPE html>
-<html>
+<html lang="{{ lang }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>F1 Calendar</title>
+    <title>{{ t.title }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
-    <h1>F1 Calendar {{ season }}</h1>
+<body data-locale="{{ 'tr-TR' if lang == 'tr' else 'en-GB' }}" data-tz-yours="{{ t.tz_yours }}" data-tz-track="{{ t.tz_track }}">
+    <header class="top">
+        <h1>{{ t.title }} {{ season }}</h1>
+        <nav class="langs">
+            <a href="?lang=en" class="{% if lang == 'en' %}active{% endif %}">EN</a>
+            <a href="?lang=tr" class="{% if lang == 'tr' %}active{% endif %}">TR</a>
+        </nav>
+    </header>
 
     <nav class="seasons">
         {% for s in seasons %}
@@ -16,13 +22,13 @@
     </nav>
 
     <div class="toggle">
-        <button id="btn-yours" class="active">Your time</button>
-        <button id="btn-track">Track time</button>
+        <button id="btn-yours" class="active">{{ t.your_time }}</button>
+        <button id="btn-track">{{ t.track_time }}</button>
     </div>
     <p class="note" id="tz-note"></p>
 
     {% if not races %}
-    <p>The {{ season }} calendar isn't available yet.</p>
+    <p>{{ t.not_available.format(season=season) }}</p>
     {% endif %}
 
     {% for race in races %}
@@ -30,7 +36,7 @@
         <summary>
             <span class="round">{{ race.round }}</span>
             <span class="name">{{ race.name }} <small>{{ race.country }}</small></span>
-            {% if race.status == "next" %}<span class="badge">NEXT</span>{% endif %}
+            {% if race.status == "next" %}<span class="badge">{{ t.next }}</span>{% endif %}
             {% if race.winner %}<span class="winner-chip" style="--team: {{ race.winner.color }}">🏆 {{ race.winner.code }}</span>{% endif %}
             {% if race.main.tbc %}
             <span class="date">{{ race.main.date }}</span>
@@ -43,9 +49,9 @@
             <ul class="sessions">
                 {% for session in race.sessions %}
                 <li>
-                    <span>{{ session.name }}</span>
+                    <span>{{ t.get(session.name, session.name) }}</span>
                     {% if session.tbc %}
-                    <span>{{ session.date }} · TBC</span>
+                    <span>{{ session.date }} · {{ t.tbc }}</span>
                     {% else %}
                     <span data-utc="{{ session.utc }}" data-tz="{{ race.tz }}"></span>
                     {% endif %}
@@ -55,7 +61,7 @@
             {% if race.winner or race.sprint_winner or race.quali %}
             <div class="results">
                 {% if race.sprint_grid %}
-                <p class="label">Sprint Qualifying</p>
+                <p class="label">{{ t.sprint_qualifying }}</p>
                 <div class="chips">
                     {% for driver in race.sprint_grid %}
                     <span class="chip" style="--team: {{ driver.color }}">P{{ loop.index }} {{ driver.flag }} {{ driver.code }}</span>
@@ -65,14 +71,14 @@
 
                 {% if race.sprint_winner %}
                 <div class="winner-card" style="--team: {{ race.sprint_winner.color }}">
-                    <span class="label">Sprint winner</span>
+                    <span class="label">{{ t.sprint_winner }}</span>
                     <span class="driver">{{ race.sprint_winner.flag }} {{ race.sprint_winner.name }}</span>
                     <span class="team">{{ race.sprint_winner.team }}</span>
                 </div>
                 {% endif %}
 
                 {% if race.quali %}
-                <p class="label">Qualifying</p>
+                <p class="label">{{ t.qualifying }}</p>
                 <div class="podium">
                     {% for driver in race.quali %}
                     <div class="step p{{ loop.index }}" style="--team: {{ driver.color }}">
@@ -85,7 +91,7 @@
 
                 {% if race.winner %}
                 <div class="winner-card main" style="--team: {{ race.winner.color }}">
-                    <span class="label">🏆 Race winner</span>
+                    <span class="label">🏆 {{ t.race_winner }}</span>
                     <span class="driver">{{ race.winner.flag }} {{ race.winner.name }}</span>
                     <span class="team">{{ race.winner.team }}</span>
                 </div>
@@ -99,6 +105,7 @@
 
     <script>
         let mode = "yours";
+        const locale = document.body.dataset.locale;
 
         function formatTime(utc, timeZone, dateOnly) {
             let options;
@@ -110,7 +117,7 @@
             if (timeZone) {
                 options.timeZone = timeZone;
             }
-            return new Date(utc).toLocaleString("en-GB", options);
+            return new Date(utc).toLocaleString(locale, options);
         }
 
         function render() {
@@ -125,9 +132,9 @@
 
             const note = document.getElementById("tz-note");
             if (mode === "yours") {
-                note.textContent = "Times in your time zone (" + Intl.DateTimeFormat().resolvedOptions().timeZone + ")";
+                note.textContent = document.body.dataset.tzYours + " (" + Intl.DateTimeFormat().resolvedOptions().timeZone + ")";
             } else {
-                note.textContent = "Times in each circuit's local time";
+                note.textContent = document.body.dataset.tzTrack;
             }
         }
 

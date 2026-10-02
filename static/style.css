@@ -204,3 +204,27 @@ h1 {
     .race[open] .results > *,
     .race[open] .step .bar { animation: none; }
 }
+
+.top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.langs { display: flex; gap: 6px; }
+
+.langs a {
+    color: var(--muted);
+    text-decoration: none;
+    padding: 4px 10px;
+    border: 1px solid #2c2c3a;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.langs a.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}

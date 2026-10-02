@@ -2,7 +2,7 @@ import time
 import requests
 from datetime import datetime, timedelta, timezone
 from timezonefinder import TimezoneFinder
-from flask import Flask, render_template, abort
+from flask import Flask, render_template, abort, request, make_response
 
 app = Flask(__name__)
 
@@ -45,6 +45,51 @@ NATIONALITY_CODES = {
     "Brazilian": "BR", "Russian": "RU", "Polish": "PL",
 }
 
+TRANSLATIONS = {
+    "en": {
+        "title": "F1 Calendar",
+        "your_time": "Your time",
+        "track_time": "Track time",
+        "tz_yours": "Times in your time zone",
+        "tz_track": "Times in each circuit's local time",
+        "not_available": "The {season} calendar isn't available yet.",
+        "unavailable": "Calendar data is unavailable right now. Please try again later.",
+        "next": "NEXT",
+        "tbc": "TBC",
+        "sprint_qualifying": "Sprint Qualifying",
+        "sprint_winner": "Sprint winner",
+        "qualifying": "Qualifying",
+        "race_winner": "Race winner",
+    },
+    "tr": {
+        "title": "F1 Takvimi",
+        "your_time": "Senin saatin",
+        "track_time": "Pist saati",
+        "tz_yours": "Saatler senin saat dilimine göre",
+        "tz_track": "Saatler her pistin yerel saatine göre",
+        "not_available": "{season} takvimi henüz mevcut değil.",
+        "unavailable": "Takvim verilerine şu anda ulaşılamıyor. Lütfen daha sonra tekrar dene.",
+        "next": "SIRADAKİ",
+        "tbc": "Açıklanacak",
+        "sprint_qualifying": "Sprint Sıralama",
+        "sprint_winner": "Sprint kazananı",
+        "qualifying": "Sıralama",
+        "race_winner": "Yarış kazananı",
+        "Practice 1": "1. Antrenman",
+        "Practice 2": "2. Antrenman",
+        "Practice 3": "3. Antrenman",
+        "Sprint Qualifying": "Sprint Sıralama",
+        "Qualifying": "Sıralama",
+        "Race": "Yarış",
+    },
+}
+
+
+def get_lang():
+    lang = request.args.get("lang") or request.cookies.get("lang")
+    if lang not in TRANSLATIONS:
+        lang = request.accept_languages.best_match(["en", "tr"]) or "en"
+    return lang
 
 def flag(nationality):
     code = NATIONALITY_CODES.get(nationality, "")
@@ -208,6 +253,8 @@ def get_races(season):
 @app.route("/")
 @app.route("/<int:season>")
 def home(season=None):
+    lang = get_lang()
+    t = TRANSLATIONS[lang]
     this_year = datetime.now().year
     if season is None:
         season = this_year
@@ -217,9 +264,18 @@ def home(season=None):
         races = get_races(season)
     except Exception:
         app.logger.exception("Could not load calendar")
-        return "<h1>F1 Calendar</h1><p>Calendar data is unavailable right now. Please try again later.</p>", 503
-    return render_template("index.html", races=races, season=season, seasons=list(range(FIRST_SEASON, this_year + 2)))
-
+        return f"<h1>{t['title']}</h1><p>{t['unavailable']}</p>", 503
+    html = render_template(
+        "index.html",
+        races=races,
+        season=season,
+        seasons=list(range(FIRST_SEASON, this_year + 2)),
+        lang=lang,
+        t=t,
+    )
+    response = make_response(html)
+    response.set_cookie("lang", lang, max_age=60 * 60 * 24 * 365)
+    return response
 
 @app.route("/about")
 def about():
