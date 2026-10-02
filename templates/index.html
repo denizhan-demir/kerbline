@@ -37,7 +37,6 @@
             <span class="round">{{ race.round }}</span>
             <span class="name">{{ race.flag }} {{ race.name }} <small>{{ race.country }}</small></span>
             {% if race.status == "next" %}<span class="badge">{{ t.next }}</span>{% endif %}
-            {% if race.winner %}<span class="winner-chip" style="--team: {{ race.winner.color }}">🏆 {{ race.winner.code }}</span>{% endif %}
             {% if race.main.tbc %}
             <span class="date">{{ race.main.date }}</span>
             {% else %}
@@ -62,80 +61,9 @@
                 {% endif %}
                 {% endfor %}
             </ul>
-            {% if race.winner or race.sprint_winner or race.quali %}
-            <div class="results">
-                {% if race.sprint_grid %}
-                <p class="label">{{ t.sprint_qualifying }}</p>
-                <div class="chips">
-                    {% for driver in race.sprint_grid %}
-                    <span class="chip" style="--team: {{ driver.color }}">P{{ loop.index }} {{ driver.flag }} {{ driver.code }}</span>
-                    {% endfor %}
-                </div>
-                {% endif %}
-
-                {% if race.sprint_winner %}
-                <div class="winner-card" style="--team: {{ race.sprint_winner.color }}">
-                    <span class="label">{{ t.sprint_winner }}</span>
-                    <span class="driver">{{ race.sprint_winner.flag }} {{ race.sprint_winner.name }}</span>
-                    <span class="team">{{ race.sprint_winner.team }}</span>
-                </div>
-                {% endif %}
-
-                {% if race.quali %}
-                <p class="label">{{ t.qualifying }}</p>
-                <div class="podium">
-                    {% for driver in race.quali %}
-                    <div class="step p{{ loop.index }}" style="--team: {{ driver.color }}">
-                        <span class="code">{{ driver.flag }} {{ driver.code }}</span>
-                        <div class="bar">P{{ loop.index }}</div>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-
-                {% if race.race_top3 %}
-                <p class="label">🏆 {{ t.race }}</p>
-                <div class="podium">
-                    {% for driver in race.race_top3 %}
-                    <div class="step p{{ loop.index }}" style="--team: {{ driver.color }}">
-                        <span class="code">{{ driver.flag }} {{ driver.code }}</span>
-                        <div class="bar">P{{ loop.index }}</div>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-
-                {% if race.full_results %}
-                <details class="full-results">
-                    <summary>{{ t.full_result }}</summary>
-                    <div class="content">
-                        <div class="table-wrap">
-                            <table class="result-table">
-                                <thead>
-                                    <tr>
-                                        <th>{{ t.pos }}</th>
-                                        <th>{{ t.driver }}</th>
-                                        <th class="team-cell">{{ t.team }}</th>
-                                        <th>{{ t.time }}</th>
-                                        <th class="pts">{{ t.points }}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for row in race.full_results %}
-                                    <tr style="--team: {{ row.color }}">
-                                        <td class="pos">{{ row.position }}</td>
-                                        <td>{{ row.flag }} {{ row.name }}</td>
-                                        <td class="team-cell">{{ row.team }}</td>
-                                        <td class="time-cell">{{ row.time }}</td>
-                                        <td class="pts">{{ row.points }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </details>
-                {% endif %}
+            {% if race.status != "upcoming" %}
+            <div class="results" data-url="/results/{{ season }}/{{ race.round }}">
+                <p class="note loading">{{ t.loading }}</p>
             </div>
             {% endif %}
         </div>
@@ -201,11 +129,14 @@
 
         const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-        for (const details of document.querySelectorAll("details.race:not(.tbc), details.full-results")) {
+        function setupDetails(details, onOpen) {
             const summary = details.querySelector("summary");
             const content = details.querySelector(".content");
 
             summary.addEventListener("click", function (event) {
+                if (!details.open && onOpen) {
+                    onOpen(details);
+                }
                 if (reduceMotion) {
                     return;
                 }
@@ -231,6 +162,35 @@
                     );
                 }
             });
+        }
+
+        async function loadResults(details) {
+            const box = details.querySelector(".results[data-url]");
+            if (!box || box.dataset.loaded) {
+                return;
+            }
+            box.dataset.loaded = "true";
+            try {
+                const response = await fetch(box.dataset.url);
+                box.innerHTML = await response.text();
+                if (!response.ok) {
+                    delete box.dataset.loaded;
+                    return;
+                }
+                for (const inner of box.querySelectorAll("details.full-results")) {
+                    setupDetails(inner, null);
+                }
+            } catch (error) {
+                box.innerHTML = "";
+                delete box.dataset.loaded;
+            }
+        }
+
+        for (const details of document.querySelectorAll("details.race:not(.tbc)")) {
+            setupDetails(details, loadResults);
+            if (details.open) {
+                loadResults(details);
+            }
         }
     </script>
 </body>

@@ -67,6 +67,7 @@ TRANSLATIONS = {
         "tz_track": "Times in each circuit's local time",
         "not_available": "The {season} calendar isn't available yet.",
         "unavailable": "Calendar data is unavailable right now. Please try again later.",
+        "loading": "Loading results…",
         "next": "NEXT",
         "tbc": "TBC",
         "sprint_qualifying": "Sprint Qualifying",
@@ -87,7 +88,8 @@ TRANSLATIONS = {
         "tz_yours": "Saatler senin saat dilimine göre",
         "tz_track": "Saatler her pistin yerel saatine göre",
         "not_available": "{season} takvimi henüz mevcut değil.",
-        "unavailable": "Takvim verilerine şu anda ulaşılamıyor. Lütfen daha sonra tekrar dene.",
+        "unavailable": "Verilere şu anda ulaşılamıyor. Lütfen daha sonra tekrar dene.",
+        "loading": "Sonuçlar yükleniyor…",
         "next": "SIRADAKİ",
         "tbc": "Açıklanacak",
         "sprint_qualifying": "Sprint Sıralama",
@@ -127,13 +129,23 @@ def to_flag(code):
     return result
 
 
+blocked_until = datetime.min
+
+
 def get_cached(url, max_age):
+    global blocked_until
     cached = cache.get(url)
     if cached is None or datetime.now() - cached["at"] > max_age:
+        if datetime.now() < blocked_until:
+            if cached is None:
+                raise RuntimeError("API rate limit reached, waiting")
+            return cached["data"]
         try:
             print(f"Fetching {url}")
             time.sleep(0.3)
             response = requests.get(url, timeout=10)
+            if response.status_code == 429:
+                blocked_until = datetime.now() + timedelta(minutes=1)
             response.raise_for_status()
             cache[url] = {"data": response.json(), "at": datetime.now()}
         except requests.RequestException:
@@ -148,31 +160,12 @@ def fetch_races(season):
     return data["MRData"]["RaceTable"]["Races"]
 
 
-def fetch_all_pages(path, max_age, key):
-    by_round = {}
-    offset = 0
-    while True:
-        data = get_cached(f"{BASE_URL}/{path}.json?limit=100&offset={offset}", max_age)
-        for race in data["MRData"]["RaceTable"]["Races"]:
-            round_number = race["round"]
-            if round_number not in by_round:
-                by_round[round_number] = []
-            by_round[round_number].extend(race[key])
-        offset += 100
-        if offset >= int(data["MRData"]["total"]):
-            break
-    return by_round
-
-
-def fetch_results(season):
-    if season < datetime.now().year:
-        max_age = timedelta(hours=24)
-    else:
-        max_age = timedelta(minutes=30)
-    race_results = fetch_all_pages(f"{season}/results", max_age, "Results")
-    sprint_results = fetch_all_pages(f"{season}/sprint", max_age, "SprintResults")
-    quali_results = fetch_all_pages(f"{season}/qualifying", max_age, "QualifyingResults")
-    return race_results, sprint_results, quali_results
+def fetch_round(season, round_number, endpoint, key, max_age):
+    data = get_cached(f"{BASE_URL}/{season}/{round_number}/{endpoint}.json?limit=100", max_age)
+    races = data["MRData"]["RaceTable"]["Races"]
+    if races:
+        return races[0][key]
+    return []
 
 
 def make_driver(result):
@@ -222,6 +215,23 @@ def sprint_grid_top3(sprint_results):
     return top3(starters)
 
 
+def get_race_results(season, round_number):
+    if season < datetime.now().year:
+        max_age = timedelta(hours=24)
+    else:
+        max_age = timedelta(minutes=30)
+    race_list = fetch_round(season, round_number, "results", "Results", max_age)
+    sprint_list = fetch_round(season, round_number, "sprint", "SprintResults", max_age)
+    quali_list = fetch_round(season, round_number, "qualifying", "QualifyingResults", max_age)
+    return {
+        "race_top3": top3(race_list),
+        "full_results": full_results(race_list),
+        "sprint_winner": make_driver(sprint_list[0]) if sprint_list else None,
+        "sprint_grid": sprint_grid_top3(sprint_list),
+        "quali": top3(quali_list),
+    }
+
+
 def track_timezone(race):
     location = race["Circuit"]["Location"]
     return tf.timezone_at(lng=float(location["long"]), lat=float(location["lat"])) or ""
@@ -243,12 +253,6 @@ def make_session(name, session):
 
 def get_races(season):
     races = fetch_races(season)
-    try:
-        race_results, sprint_results, quali_results = fetch_results(season)
-    except Exception:
-        app.logger.exception("Could not load results")
-        race_results, sprint_results, quali_results = {}, {}, {}
-
     now = datetime.now(timezone.utc)
     mark_next = season == now.year
     next_found = False
@@ -256,7 +260,6 @@ def get_races(season):
 
     for race in races:
         race_time = parse_time(race)
-        round_number = race["round"]
         country = race["Circuit"]["Location"]["country"]
 
         if race_time < now:
@@ -274,25 +277,15 @@ def get_races(season):
         sessions.append(make_session("Race", race))
         sessions.sort(key=lambda s: s["utc"])
 
-        race_list = race_results.get(round_number, [])
-        sprint_list = sprint_results.get(round_number, [])
-        quali_list = quali_results.get(round_number, [])
-
         result.append({
             "status": status,
-            "round": round_number,
+            "round": race["round"],
             "name": race["raceName"],
             "country": country,
             "flag": to_flag(COUNTRY_CODES.get(country, "")),
             "main": make_session("Race", race),
             "tz": track_timezone(race),
             "sessions": sessions,
-            "winner": make_driver(race_list[0]) if race_list else None,
-            "race_top3": top3(race_list),
-            "full_results": full_results(race_list),
-            "sprint_winner": make_driver(sprint_list[0]) if sprint_list else None,
-            "sprint_grid": sprint_grid_top3(sprint_list),
-            "quali": top3(quali_list),
         })
 
     return result
@@ -324,6 +317,21 @@ def home(season=None):
     response = make_response(html)
     response.set_cookie("lang", lang, max_age=60 * 60 * 24 * 365)
     return response
+
+
+@app.route("/results/<int:season>/<int:round_number>")
+def race_results(season, round_number):
+    t = TRANSLATIONS[get_lang()]
+    if season < FIRST_SEASON or season > datetime.now().year + 1:
+        abort(404)
+    if round_number < 1 or round_number > 30:
+        abort(404)
+    try:
+        results = get_race_results(season, round_number)
+    except Exception:
+        app.logger.exception("Could not load results")
+        return f"<p class='note'>{t['unavailable']}</p>", 503
+    return render_template("results.html", r=results, t=t)
 
 
 @app.route("/about")

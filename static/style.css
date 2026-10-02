@@ -299,3 +299,14 @@ h1 {
 @media (max-width: 600px) {
     .result-table .team-cell { display: none; }
 }
+
+.loading { animation: pulse 1.2s ease-in-out infinite; }
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .loading { animation: none; }
+}

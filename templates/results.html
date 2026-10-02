@@ -1,0 +1,72 @@
+{% if r.sprint_grid %}
+<p class="label">{{ t.sprint_qualifying }}</p>
+<div class="chips">
+    {% for driver in r.sprint_grid %}
+    <span class="chip" style="--team: {{ driver.color }}">P{{ loop.index }} {{ driver.flag }} {{ driver.code }}</span>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if r.sprint_winner %}
+<div class="winner-card" style="--team: {{ r.sprint_winner.color }}">
+    <span class="label">{{ t.sprint_winner }}</span>
+    <span class="driver">{{ r.sprint_winner.flag }} {{ r.sprint_winner.name }}</span>
+    <span class="team">{{ r.sprint_winner.team }}</span>
+</div>
+{% endif %}
+
+{% if r.quali %}
+<p class="label">{{ t.qualifying }}</p>
+<div class="podium">
+    {% for driver in r.quali %}
+    <div class="step p{{ loop.index }}" style="--team: {{ driver.color }}">
+        <span class="code">{{ driver.flag }} {{ driver.code }}</span>
+        <div class="bar">P{{ loop.index }}</div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if r.race_top3 %}
+<p class="label">🏆 {{ t.race }}</p>
+<div class="podium">
+    {% for driver in r.race_top3 %}
+    <div class="step p{{ loop.index }}" style="--team: {{ driver.color }}">
+        <span class="code">{{ driver.flag }} {{ driver.code }}</span>
+        <div class="bar">P{{ loop.index }}</div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if r.full_results %}
+<details class="full-results">
+    <summary>{{ t.full_result }}</summary>
+    <div class="content">
+        <div class="table-wrap">
+            <table class="result-table">
+                <thead>
+                    <tr>
+                        <th>{{ t.pos }}</th>
+                        <th>{{ t.driver }}</th>
+                        <th class="team-cell">{{ t.team }}</th>
+                        <th>{{ t.time }}</th>
+                        <th class="pts">{{ t.points }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in r.full_results %}
+                    <tr style="--team: {{ row.color }}">
+                        <td class="pos">{{ row.position }}</td>
+                        <td>{{ row.flag }} {{ row.name }}</td>
+                        <td class="team-cell">{{ row.team }}</td>
+                        <td class="time-cell">{{ row.time }}</td>
+                        <td class="pts">{{ row.points }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</details>
+{% endif %}
