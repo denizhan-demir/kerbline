@@ -45,6 +45,19 @@ NATIONALITY_CODES = {
     "Brazilian": "BR", "Russian": "RU", "Polish": "PL",
 }
 
+COUNTRY_CODES = {
+    "Australia": "AU", "Austria": "AT", "Azerbaijan": "AZ", "Bahrain": "BH",
+    "Belgium": "BE", "Brazil": "BR", "Canada": "CA", "China": "CN",
+    "France": "FR", "Germany": "DE", "Hungary": "HU", "Italy": "IT",
+    "Japan": "JP", "Malaysia": "MY", "Mexico": "MX", "Monaco": "MC",
+    "Netherlands": "NL", "Portugal": "PT", "Qatar": "QA", "Russia": "RU",
+    "Saudi Arabia": "SA", "Singapore": "SG", "Spain": "ES", "Turkey": "TR",
+    "Türkiye": "TR", "UAE": "AE", "UK": "GB", "United Kingdom": "GB",
+    "USA": "US", "United States": "US",
+}
+
+POSITION_LABELS = {"R": "DNF", "D": "DSQ", "E": "EX", "W": "DNS", "F": "DNQ", "N": "NC"}
+
 TRANSLATIONS = {
     "en": {
         "title": "F1 Calendar",
@@ -59,7 +72,13 @@ TRANSLATIONS = {
         "sprint_qualifying": "Sprint Qualifying",
         "sprint_winner": "Sprint winner",
         "qualifying": "Qualifying",
-        "race_winner": "Race winner",
+        "race": "Race",
+        "full_result": "Full race result",
+        "pos": "Pos",
+        "driver": "Driver",
+        "team": "Team",
+        "time": "Time / Status",
+        "points": "Pts",
     },
     "tr": {
         "title": "F1 Takvimi",
@@ -74,7 +93,13 @@ TRANSLATIONS = {
         "sprint_qualifying": "Sprint Sıralama",
         "sprint_winner": "Sprint kazananı",
         "qualifying": "Sıralama",
-        "race_winner": "Yarış kazananı",
+        "race": "Yarış",
+        "full_result": "Tüm yarış sonucu",
+        "pos": "Sıra",
+        "driver": "Pilot",
+        "team": "Takım",
+        "time": "Süre / Durum",
+        "points": "Puan",
         "Practice 1": "1. Antrenman",
         "Practice 2": "2. Antrenman",
         "Practice 3": "3. Antrenman",
@@ -84,6 +109,9 @@ TRANSLATIONS = {
     },
 }
 
+cache = {}
+tf = TimezoneFinder()
+
 
 def get_lang():
     lang = request.args.get("lang") or request.cookies.get("lang")
@@ -91,15 +119,12 @@ def get_lang():
         lang = request.accept_languages.best_match(["en", "tr"]) or "en"
     return lang
 
-def flag(nationality):
-    code = NATIONALITY_CODES.get(nationality, "")
+
+def to_flag(code):
     result = ""
     for letter in code:
         result += chr(0x1F1E6 + ord(letter) - ord("A"))
     return result
-
-cache = {}
-tf = TimezoneFinder()
 
 
 def get_cached(url, max_age):
@@ -156,10 +181,22 @@ def make_driver(result):
     return {
         "name": driver["givenName"] + " " + driver["familyName"],
         "code": driver.get("code", driver["familyName"][:3].upper()),
-        "flag": flag(driver.get("nationality", "")),
+        "flag": to_flag(NATIONALITY_CODES.get(driver.get("nationality", ""), "")),
         "team": result["Constructor"]["name"],
         "color": TEAM_COLORS.get(team_id, "#9a9aa8"),
     }
+
+
+def make_result_row(result):
+    row = make_driver(result)
+    position = result.get("positionText", result.get("position", ""))
+    row["position"] = POSITION_LABELS.get(position, position)
+    row["points"] = result.get("points", "0")
+    if "Time" in result:
+        row["time"] = result["Time"]["time"]
+    else:
+        row["time"] = result.get("status", "")
+    return row
 
 
 def top3(results):
@@ -167,6 +204,13 @@ def top3(results):
     for result in results[:3]:
         drivers.append(make_driver(result))
     return drivers
+
+
+def full_results(results):
+    rows = []
+    for result in results:
+        rows.append(make_result_row(result))
+    return rows
 
 
 def sprint_grid_top3(sprint_results):
@@ -213,6 +257,7 @@ def get_races(season):
     for race in races:
         race_time = parse_time(race)
         round_number = race["round"]
+        country = race["Circuit"]["Location"]["country"]
 
         if race_time < now:
             status = "done" if mark_next else "past"
@@ -237,11 +282,14 @@ def get_races(season):
             "status": status,
             "round": round_number,
             "name": race["raceName"],
-            "country": race["Circuit"]["Location"]["country"],
+            "country": country,
+            "flag": to_flag(COUNTRY_CODES.get(country, "")),
             "main": make_session("Race", race),
             "tz": track_timezone(race),
             "sessions": sessions,
             "winner": make_driver(race_list[0]) if race_list else None,
+            "race_top3": top3(race_list),
+            "full_results": full_results(race_list),
             "sprint_winner": make_driver(sprint_list[0]) if sprint_list else None,
             "sprint_grid": sprint_grid_top3(sprint_list),
             "quali": top3(quali_list),
@@ -276,6 +324,7 @@ def home(season=None):
     response = make_response(html)
     response.set_cookie("lang", lang, max_age=60 * 60 * 24 * 365)
     return response
+
 
 @app.route("/about")
 def about():

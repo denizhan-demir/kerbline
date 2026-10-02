@@ -46,7 +46,7 @@ h1 {
     border-radius: 4px;
 }
 
-.race.done summary { opacity: 0.6; }
+.race.done > summary { opacity: 0.6; }
 
 .race.next { background: #1f1f2b; }
 
@@ -54,12 +54,6 @@ h1 {
     list-style: none;
     margin: 0;
     padding: 0 8px 14px 44px;
-}
-
-.sessions li {
-    display: flex;
-    justify-content: space-between;
-    padding: 6px 0;
 }
 
 .toggle { display: flex; gap: 8px; margin-bottom: 8px; }
@@ -227,4 +221,81 @@ h1 {
     background: var(--accent);
     color: white;
     border-color: var(--accent);
+}
+
+.sessions { max-width: 420px; }
+
+.sessions li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: 16px;
+    padding: 4px 0;
+}
+
+.sessions .day {
+    grid-column: 1 / -1;
+    margin-top: 12px;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.sessions .day:empty { display: none; }
+
+.sessions .time {
+    font-weight: bold;
+    font-variant-numeric: tabular-nums;
+}
+
+.full-results { margin-top: 18px; }
+
+.full-results > summary {
+    display: inline-block;
+    padding: 8px 14px;
+    border: 1px solid #2c2c3a;
+    border-radius: 6px;
+    color: var(--muted);
+    cursor: pointer;
+    list-style: none;
+}
+
+.full-results > summary::-webkit-details-marker { display: none; }
+.full-results > summary::after { content: " ▾"; }
+.full-results[open] > summary::after { content: " ▴"; }
+.full-results > summary:hover { background: #1f1f2b; color: #f0f0f0; }
+
+.table-wrap { overflow-x: auto; margin-top: 12px; }
+
+.result-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+
+.result-table th {
+    text-align: left;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: normal;
+    text-transform: uppercase;
+    padding: 6px 8px;
+}
+
+.result-table td {
+    padding: 8px;
+    border-top: 1px solid #2c2c3a;
+    white-space: nowrap;
+}
+
+.result-table .pos {
+    width: 40px;
+    font-weight: bold;
+    border-left: 4px solid var(--team);
+}
+
+.result-table th.pos { border-left: none; }
+.result-table .team-cell { color: var(--muted); }
+.result-table .time-cell { font-variant-numeric: tabular-nums; }
+.result-table .pts { text-align: right; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 600px) {
+    .result-table .team-cell { display: none; }
 }

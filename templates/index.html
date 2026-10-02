@@ -35,27 +35,31 @@
     <details class="race {{ race.status }}{% if race.main.tbc %} tbc{% endif %}" {% if race.status == "next" %}open{% endif %}>
         <summary>
             <span class="round">{{ race.round }}</span>
-            <span class="name">{{ race.name }} <small>{{ race.country }}</small></span>
+            <span class="name">{{ race.flag }} {{ race.name }} <small>{{ race.country }}</small></span>
             {% if race.status == "next" %}<span class="badge">{{ t.next }}</span>{% endif %}
             {% if race.winner %}<span class="winner-chip" style="--team: {{ race.winner.color }}">🏆 {{ race.winner.code }}</span>{% endif %}
             {% if race.main.tbc %}
             <span class="date">{{ race.main.date }}</span>
             {% else %}
-            <span class="date" data-utc="{{ race.main.utc }}" data-tz="{{ race.tz }}" data-format="date"></span>
+            <span class="date" data-utc="{{ race.main.utc }}" data-tz="{{ race.tz }}"></span>
             {% endif %}
         </summary>
         {% if not race.main.tbc %}
         <div class="content">
             <ul class="sessions">
                 {% for session in race.sessions %}
+                {% if session.tbc %}
                 <li>
                     <span>{{ t.get(session.name, session.name) }}</span>
-                    {% if session.tbc %}
                     <span>{{ session.date }} · {{ t.tbc }}</span>
-                    {% else %}
-                    <span data-utc="{{ session.utc }}" data-tz="{{ race.tz }}"></span>
-                    {% endif %}
                 </li>
+                {% else %}
+                <li data-utc="{{ session.utc }}" data-tz="{{ race.tz }}">
+                    <span class="day"></span>
+                    <span>{{ t.get(session.name, session.name) }}</span>
+                    <span class="time"></span>
+                </li>
+                {% endif %}
                 {% endfor %}
             </ul>
             {% if race.winner or race.sprint_winner or race.quali %}
@@ -89,12 +93,48 @@
                 </div>
                 {% endif %}
 
-                {% if race.winner %}
-                <div class="winner-card main" style="--team: {{ race.winner.color }}">
-                    <span class="label">🏆 {{ t.race_winner }}</span>
-                    <span class="driver">{{ race.winner.flag }} {{ race.winner.name }}</span>
-                    <span class="team">{{ race.winner.team }}</span>
+                {% if race.race_top3 %}
+                <p class="label">🏆 {{ t.race }}</p>
+                <div class="podium">
+                    {% for driver in race.race_top3 %}
+                    <div class="step p{{ loop.index }}" style="--team: {{ driver.color }}">
+                        <span class="code">{{ driver.flag }} {{ driver.code }}</span>
+                        <div class="bar">P{{ loop.index }}</div>
+                    </div>
+                    {% endfor %}
                 </div>
+                {% endif %}
+
+                {% if race.full_results %}
+                <details class="full-results">
+                    <summary>{{ t.full_result }}</summary>
+                    <div class="content">
+                        <div class="table-wrap">
+                            <table class="result-table">
+                                <thead>
+                                    <tr>
+                                        <th>{{ t.pos }}</th>
+                                        <th>{{ t.driver }}</th>
+                                        <th class="team-cell">{{ t.team }}</th>
+                                        <th>{{ t.time }}</th>
+                                        <th class="pts">{{ t.points }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in race.full_results %}
+                                    <tr style="--team: {{ row.color }}">
+                                        <td class="pos">{{ row.position }}</td>
+                                        <td>{{ row.flag }} {{ row.name }}</td>
+                                        <td class="team-cell">{{ row.team }}</td>
+                                        <td class="time-cell">{{ row.time }}</td>
+                                        <td class="pts">{{ row.points }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </details>
                 {% endif %}
             </div>
             {% endif %}
@@ -107,24 +147,33 @@
         let mode = "yours";
         const locale = document.body.dataset.locale;
 
-        function formatTime(utc, timeZone, dateOnly) {
-            let options;
-            if (dateOnly) {
-                options = { day: "2-digit", month: "2-digit", year: "numeric" };
-            } else {
-                options = { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" };
-            }
+        const DATE_FORMAT = { day: "2-digit", month: "2-digit", year: "numeric" };
+        const DAY_FORMAT = { weekday: "long", day: "numeric", month: "long" };
+        const TIME_FORMAT = { hour: "2-digit", minute: "2-digit" };
+
+        function format(utc, timeZone, options) {
+            const finalOptions = { ...options };
             if (timeZone) {
-                options.timeZone = timeZone;
+                finalOptions.timeZone = timeZone;
             }
-            return new Date(utc).toLocaleString(locale, options);
+            return new Date(utc).toLocaleString(locale, finalOptions);
         }
 
         function render() {
-            const elements = document.querySelectorAll("[data-utc]");
-            for (const el of elements) {
+            for (const el of document.querySelectorAll(".date[data-utc]")) {
                 const timeZone = mode === "track" ? el.dataset.tz : null;
-                el.textContent = formatTime(el.dataset.utc, timeZone, el.dataset.format === "date");
+                el.textContent = format(el.dataset.utc, timeZone, DATE_FORMAT);
+            }
+
+            for (const list of document.querySelectorAll(".sessions")) {
+                let previousDay = "";
+                for (const item of list.querySelectorAll("li[data-utc]")) {
+                    const timeZone = mode === "track" ? item.dataset.tz : null;
+                    const day = format(item.dataset.utc, timeZone, DAY_FORMAT);
+                    item.querySelector(".time").textContent = format(item.dataset.utc, timeZone, TIME_FORMAT);
+                    item.querySelector(".day").textContent = day === previousDay ? "" : day;
+                    previousDay = day;
+                }
             }
 
             document.getElementById("btn-yours").classList.toggle("active", mode === "yours");
@@ -152,7 +201,7 @@
 
         const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-        for (const details of document.querySelectorAll("details.race:not(.tbc)")) {
+        for (const details of document.querySelectorAll("details.race:not(.tbc), details.full-results")) {
             const summary = details.querySelector("summary");
             const content = details.querySelector(".content");
 
