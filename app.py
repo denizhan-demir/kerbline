@@ -17,6 +17,9 @@ SESSIONS = [
 ]
 
 tf = TimezoneFinder()
+def track_timezone(race):
+    location = race["Circuit"]["Location"]
+    return tf.timezone_at(lng=float(location["long"]), lat=float(location["lat"])) or ""
 
 def parse_time(session):
     time = session.get("time", "00:00:00Z")
@@ -93,6 +96,10 @@ def home(season=None):
         app.logger.exception("Could not load calendar")
         return "<h1>F1 Calendar</h1><p>Calendar data is unavailable right now. Please try again later.</p>", 503
     return render_template("index.html", races=races, season=season, seasons=[this_year, this_year + 1])
+
+@app.route("/about")
+def about():
+    return "<h1>About</h1><p>Track every F1 race weekend in your local time.</p>"
 
 if __name__ == "__main__":
     app.run(debug=True, port=8000)
