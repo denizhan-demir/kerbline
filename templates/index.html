@@ -50,6 +50,27 @@
             </li>
             {% endfor %}
         </ul>
+        {% if race.winner or race.sprint_winner or race.quali %}
+                <div class="results">
+            {% if race.sprint_grid %}
+            <p><strong>Sprint grid:</strong>
+                {% for driver in race.sprint_grid %}{{ loop.index }}. {{ driver.name }}{% if not loop.last %} · {% endif %}{% endfor %}
+            </p>
+            {% endif %}
+            {% if race.sprint_winner %}
+            <p><strong>Sprint winner:</strong> {{ race.sprint_winner.name }} ({{ race.sprint_winner.team }})</p>
+            {% endif %}
+            {% if race.quali %}
+            <p><strong>Qualifying:</strong>
+                {% for driver in race.quali %}{{ loop.index }}. {{ driver.name }}{% if not loop.last %} · {% endif %}{% endfor %}
+            </p>
+            {% endif %}
+            {% if race.winner %}
+            <p><strong>Race winner:</strong> {{ race.winner.name }} ({{ race.winner.team }})</p>
+            {% endif %}
+        </div>
+        </div>
+        {% endif %}
         {% endif %}
     </details>
     {% endfor %}

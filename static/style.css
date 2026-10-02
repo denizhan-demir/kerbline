@@ -95,3 +95,6 @@ h1 {
     color: white;
     border-color: var(--accent);
 }
+
+.results { padding: 0 8px 14px 44px; color: #c8c8d4; }
+.results p { margin: 6px 0; }
