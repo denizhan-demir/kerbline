@@ -80,7 +80,7 @@ h1 {
     border-color: var(--accent);
 }
 
-.seasons { display: flex; gap: 8px; margin-bottom: 16px; }
+.seasons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 
 .seasons a {
     color: var(--muted);

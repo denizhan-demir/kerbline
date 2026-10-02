@@ -1,17 +1,20 @@
 import requests
 from datetime import datetime, timedelta, timezone
 from timezonefinder import TimezoneFinder
-from flask import Flask, render_template
+from flask import Flask, render_template, abort
 
 app = Flask(__name__)
 
 cache = {}
+
+FIRST_SEASON = 2020
 
 SESSIONS = [
     ("FirstPractice", "Practice 1"),
     ("SecondPractice", "Practice 2"),
     ("ThirdPractice", "Practice 3"),
     ("SprintQualifying", "Sprint Qualifying"),
+    ("SprintShootout", "Sprint Shootout"),
     ("Sprint", "Sprint"),
     ("Qualifying", "Qualifying"),
 ]
@@ -59,7 +62,7 @@ def get_races(season):
         race_time = parse_time(race)
 
         if race_time < now:
-            status = "done"
+            status = "done" if mark_next else "past"
         elif mark_next and not next_found:
             status = "next"
             next_found = True
@@ -71,6 +74,7 @@ def get_races(season):
             if key in race:
                 sessions.append(make_session(label, race[key]))
         sessions.append(make_session("Race", race))
+        sessions.sort(key=lambda s: s["utc"])
 
         result.append({
             "status": status,
@@ -90,12 +94,14 @@ def home(season=None):
     this_year = datetime.now().year
     if season is None:
         season = this_year
+    if season < FIRST_SEASON or season > this_year + 1:
+        abort(404)
     try:
         races = get_races(season)
     except Exception:
         app.logger.exception("Could not load calendar")
         return "<h1>F1 Calendar</h1><p>Calendar data is unavailable right now. Please try again later.</p>", 503
-    return render_template("index.html", races=races, season=season, seasons=[this_year, this_year + 1])
+    return render_template("index.html", races=races, season=season, seasons=list(range(FIRST_SEASON, this_year + 2)))
 
 @app.route("/about")
 def about():
