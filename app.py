@@ -29,7 +29,7 @@ def make_session(name, session):
     return {
         "name": name,
         "utc": parse_time(session).isoformat(),
-        "date": session["date"],
+        "date": parse_time(session).strftime("%d/%m/%Y"),
         "tbc": "time" not in session,
     }
 
