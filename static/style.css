@@ -46,7 +46,7 @@ h1 {
     border-radius: 4px;
 }
 
-.race.done { opacity: 0.5; }
+.race.done summary { opacity: 0.6; }
 
 .race.next { background: #1f1f2b; }
 
@@ -96,5 +96,111 @@ h1 {
     border-color: var(--accent);
 }
 
-.results { padding: 0 8px 14px 44px; color: #c8c8d4; }
-.results p { margin: 6px 0; }
+.results { padding: 4px 8px 18px 44px; }
+
+.label {
+    color: var(--muted);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 16px 0 8px;
+}
+
+.winner-chip {
+    border-left: 3px solid var(--team);
+    padding-left: 6px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.winners {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+.winner-card {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 12px 14px;
+    border-left: 4px solid var(--team);
+    border-radius: 8px;
+    background: #1f1f2b;
+}
+
+.winner-card.main {
+    background: linear-gradient(90deg, color-mix(in srgb, var(--team) 25%, #1f1f2b), #1f1f2b);
+}
+
+.winner-card .label { margin: 0; }
+.winner-card .driver { font-size: 18px; font-weight: bold; }
+.winner-card .team { color: var(--muted); font-size: 13px; }
+
+.podium {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    max-width: 360px;
+}
+
+.step { flex: 1; text-align: center; }
+.step .code { display: block; font-weight: bold; margin-bottom: 6px; }
+
+.step .bar {
+    background: var(--team);
+    color: #15151e;
+    font-weight: bold;
+    padding-top: 8px;
+    border-radius: 6px 6px 0 0;
+}
+
+.p1 { order: 2; }
+.p2 { order: 1; }
+.p3 { order: 3; }
+.p1 .bar { height: 80px; }
+.p2 .bar { height: 60px; }
+.p3 .bar { height: 45px; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.chip {
+    padding: 4px 10px;
+    border: 1px solid var(--team);
+    border-left-width: 4px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.winner-card { margin-top: 16px; max-width: 420px; }
+
+.content { overflow: hidden; }
+
+.race summary { border-radius: 8px; transition: background 0.2s; }
+.race summary:hover { background: #1f1f2b; }
+
+@keyframes rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes grow {
+    from { transform: scaleY(0); }
+    to { transform: scaleY(1); }
+}
+
+.race[open] .results > * { animation: rise 0.5s ease-out both; }
+
+.race[open] .step .bar {
+    transform-origin: bottom;
+    animation: grow 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.race[open] .p3 .bar { animation-delay: 0.1s; }
+.race[open] .p2 .bar { animation-delay: 0.2s; }
+.race[open] .p1 .bar { animation-delay: 0.3s; }
+
+@media (prefers-reduced-motion: reduce) {
+    .race[open] .results > *,
+    .race[open] .step .bar { animation: none; }
+}

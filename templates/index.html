@@ -31,6 +31,7 @@
             <span class="round">{{ race.round }}</span>
             <span class="name">{{ race.name }} <small>{{ race.country }}</small></span>
             {% if race.status == "next" %}<span class="badge">NEXT</span>{% endif %}
+            {% if race.winner %}<span class="winner-chip" style="--team: {{ race.winner.color }}">🏆 {{ race.winner.code }}</span>{% endif %}
             {% if race.main.tbc %}
             <span class="date">{{ race.main.date }}</span>
             {% else %}
@@ -38,39 +39,60 @@
             {% endif %}
         </summary>
         {% if not race.main.tbc %}
-        <ul class="sessions">
-            {% for session in race.sessions %}
-            <li>
-                <span>{{ session.name }}</span>
-                {% if session.tbc %}
-                <span>{{ session.date }} · TBC</span>
-                {% else %}
-                <span data-utc="{{ session.utc }}" data-tz="{{ race.tz }}"></span>
+        <div class="content">
+            <ul class="sessions">
+                {% for session in race.sessions %}
+                <li>
+                    <span>{{ session.name }}</span>
+                    {% if session.tbc %}
+                    <span>{{ session.date }} · TBC</span>
+                    {% else %}
+                    <span data-utc="{{ session.utc }}" data-tz="{{ race.tz }}"></span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% if race.winner or race.sprint_winner or race.quali %}
+            <div class="results">
+                {% if race.sprint_grid %}
+                <p class="label">Sprint Qualifying</p>
+                <div class="chips">
+                    {% for driver in race.sprint_grid %}
+                    <span class="chip" style="--team: {{ driver.color }}">P{{ loop.index }} {{ driver.flag }} {{ driver.code }}</span>
+                    {% endfor %}
+                </div>
                 {% endif %}
-            </li>
-            {% endfor %}
-        </ul>
-        {% if race.winner or race.sprint_winner or race.quali %}
-                <div class="results">
-            {% if race.sprint_grid %}
-            <p><strong>Sprint grid:</strong>
-                {% for driver in race.sprint_grid %}{{ loop.index }}. {{ driver.name }}{% if not loop.last %} · {% endif %}{% endfor %}
-            </p>
-            {% endif %}
-            {% if race.sprint_winner %}
-            <p><strong>Sprint winner:</strong> {{ race.sprint_winner.name }} ({{ race.sprint_winner.team }})</p>
-            {% endif %}
-            {% if race.quali %}
-            <p><strong>Qualifying:</strong>
-                {% for driver in race.quali %}{{ loop.index }}. {{ driver.name }}{% if not loop.last %} · {% endif %}{% endfor %}
-            </p>
-            {% endif %}
-            {% if race.winner %}
-            <p><strong>Race winner:</strong> {{ race.winner.name }} ({{ race.winner.team }})</p>
+
+                {% if race.sprint_winner %}
+                <div class="winner-card" style="--team: {{ race.sprint_winner.color }}">
+                    <span class="label">Sprint winner</span>
+                    <span class="driver">{{ race.sprint_winner.flag }} {{ race.sprint_winner.name }}</span>
+                    <span class="team">{{ race.sprint_winner.team }}</span>
+                </div>
+                {% endif %}
+
+                {% if race.quali %}
+                <p class="label">Qualifying</p>
+                <div class="podium">
+                    {% for driver in race.quali %}
+                    <div class="step p{{ loop.index }}" style="--team: {{ driver.color }}">
+                        <span class="code">{{ driver.flag }} {{ driver.code }}</span>
+                        <div class="bar">P{{ loop.index }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if race.winner %}
+                <div class="winner-card main" style="--team: {{ race.winner.color }}">
+                    <span class="label">🏆 Race winner</span>
+                    <span class="driver">{{ race.winner.flag }} {{ race.winner.name }}</span>
+                    <span class="team">{{ race.winner.team }}</span>
+                </div>
+                {% endif %}
+            </div>
             {% endif %}
         </div>
-        </div>
-        {% endif %}
         {% endif %}
     </details>
     {% endfor %}
@@ -120,6 +142,40 @@
         });
 
         render();
+
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        for (const details of document.querySelectorAll("details.race:not(.tbc)")) {
+            const summary = details.querySelector("summary");
+            const content = details.querySelector(".content");
+
+            summary.addEventListener("click", function (event) {
+                if (reduceMotion) {
+                    return;
+                }
+                event.preventDefault();
+                if (content.getAnimations().length > 0) {
+                    return;
+                }
+
+                if (details.open) {
+                    const closing = content.animate(
+                        [{ height: content.offsetHeight + "px" }, { height: "0px" }],
+                        { duration: 300, easing: "ease-in-out", fill: "forwards" }
+                    );
+                    closing.onfinish = function () {
+                        details.open = false;
+                        closing.cancel();
+                    };
+                } else {
+                    details.open = true;
+                    content.animate(
+                        [{ height: "0px" }, { height: content.offsetHeight + "px" }],
+                        { duration: 400, easing: "ease-out" }
+                    );
+                }
+            });
+        }
     </script>
 </body>
 </html>

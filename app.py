@@ -19,6 +19,40 @@ SESSIONS = [
     ("Qualifying", "Qualifying"),
 ]
 
+TEAM_COLORS = {
+    "mercedes": "#27F4D2",
+    "red_bull": "#3671C6",
+    "ferrari": "#E8002D",
+    "mclaren": "#FF8000",
+    "aston_martin": "#229971",
+    "racing_point": "#F596C8",
+    "alpine": "#0093CC",
+    "renault": "#FFF500",
+    "williams": "#64C4FF",
+    "alphatauri": "#5E8FAA",
+    "rb": "#6692FF",
+    "alfa": "#C92D4B",
+    "sauber": "#52E252",
+    "haas": "#B6BABD",
+}
+
+NATIONALITY_CODES = {
+    "British": "GB", "Dutch": "NL", "Monegasque": "MC", "Spanish": "ES",
+    "Mexican": "MX", "Australian": "AU", "French": "FR", "German": "DE",
+    "Finnish": "FI", "Canadian": "CA", "Thai": "TH", "Japanese": "JP",
+    "Danish": "DK", "Chinese": "CN", "American": "US", "Italian": "IT",
+    "New Zealander": "NZ", "Argentine": "AR", "Argentinian": "AR",
+    "Brazilian": "BR", "Russian": "RU", "Polish": "PL",
+}
+
+
+def flag(nationality):
+    code = NATIONALITY_CODES.get(nationality, "")
+    result = ""
+    for letter in code:
+        result += chr(0x1F1E6 + ord(letter) - ord("A"))
+    return result
+
 cache = {}
 tf = TimezoneFinder()
 
@@ -73,12 +107,13 @@ def fetch_results(season):
 
 def make_driver(result):
     driver = result["Driver"]
+    team_id = result["Constructor"]["constructorId"]
     return {
         "name": driver["givenName"] + " " + driver["familyName"],
-        "code": driver.get("code", ""),
-        "nationality": driver.get("nationality", ""),
+        "code": driver.get("code", driver["familyName"][:3].upper()),
+        "flag": flag(driver.get("nationality", "")),
         "team": result["Constructor"]["name"],
-        "team_id": result["Constructor"]["constructorId"],
+        "color": TEAM_COLORS.get(team_id, "#9a9aa8"),
     }
 
 
