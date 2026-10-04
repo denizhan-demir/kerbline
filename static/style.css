@@ -310,3 +310,5 @@ h1 {
 @media (prefers-reduced-motion: reduce) {
     .loading { animation: none; }
 }
+
+@view-transition { navigation: auto; }
