@@ -1,7 +1,8 @@
 import threading
 import time
 from datetime import datetime, timedelta, timezone
-
+import json
+from pathlib import Path
 import requests
 from flask import Flask, abort, make_response, render_template, request
 from timezonefinder import TimezoneFinder
@@ -166,9 +167,27 @@ def get_cached(url, max_age):
     return cache[url]["data"]
 
 
+def load_fallback(season):
+    path = Path(__file__).parent / "data" / f"calendar_{season}.json"
+    if not path.exists():
+        return []
+    races = []
+    for item in json.loads(path.read_text(encoding="utf-8")):
+        races.append({
+            "round": item["round"],
+            "raceName": item["raceName"],
+            "date": item["date"],
+            "Circuit": {"Location": {"country": item["country"]}},
+        })
+    return races
+
+
 def fetch_races(season):
     data = get_cached(f"{BASE_URL}/{season}.json", timedelta(hours=1))
-    return data["MRData"]["RaceTable"]["Races"]
+    races = data["MRData"]["RaceTable"]["Races"]
+    if not races:
+        races = load_fallback(season)
+    return races
 
 
 def fetch_round(season, round_number, endpoint, key, max_age):
@@ -256,6 +275,8 @@ def get_race_results(season, round_number):
 
 def track_timezone(race):
     location = race["Circuit"]["Location"]
+    if "lat" not in location or "long" not in location:
+        return ""
     return tf.timezone_at(lng=float(location["long"]), lat=float(location["lat"])) or ""
 
 
