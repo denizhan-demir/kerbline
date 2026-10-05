@@ -3,6 +3,7 @@ import requests
 from datetime import datetime, timedelta, timezone
 from timezonefinder import TimezoneFinder
 from flask import Flask, render_template, abort, request, make_response
+import threading
 
 app = Flask(__name__)
 
@@ -128,6 +129,17 @@ def to_flag(code):
         result += chr(0x1F1E6 + ord(letter) - ord("A"))
     return result
 
+rate_lock = threading.Lock()
+last_request_at = 0.0
+
+
+def wait_for_rate_limit():
+    global last_request_at
+    with rate_lock:
+        elapsed = time.monotonic() - last_request_at
+        if elapsed < 0.25:
+            time.sleep(0.25 - elapsed)
+        last_request_at = time.monotonic()
 
 blocked_until = datetime.min
 
@@ -142,7 +154,7 @@ def get_cached(url, max_age):
             return cached["data"]
         try:
             print(f"Fetching {url}")
-            time.sleep(0.3)
+            wait_for_rate_limit()
             response = requests.get(url, timeout=10)
             if response.status_code == 429:
                 blocked_until = datetime.now() + timedelta(minutes=1)
@@ -215,14 +227,25 @@ def sprint_grid_top3(sprint_results):
     return top3(starters)
 
 
+def has_sprint(season, round_number):
+    for race in fetch_races(season):
+        if race["round"] == str(round_number):
+            if "FirstPractice" not in race:
+                return True
+            return "Sprint" in race
+    return False
+
+
 def get_race_results(season, round_number):
     if season < datetime.now().year:
         max_age = timedelta(hours=24)
     else:
         max_age = timedelta(minutes=30)
     race_list = fetch_round(season, round_number, "results", "Results", max_age)
-    sprint_list = fetch_round(season, round_number, "sprint", "SprintResults", max_age)
     quali_list = fetch_round(season, round_number, "qualifying", "QualifyingResults", max_age)
+    sprint_list = []
+    if has_sprint(season, round_number):
+        sprint_list = fetch_round(season, round_number, "sprint", "SprintResults", max_age)
     return {
         "race_top3": top3(race_list),
         "full_results": full_results(race_list),
@@ -322,7 +345,8 @@ def home(season=None):
 @app.route("/results/<int:season>/<int:round_number>")
 def race_results(season, round_number):
     t = TRANSLATIONS[get_lang()]
-    if season < FIRST_SEASON or season > datetime.now().year + 1:
+    this_year = datetime.now().year
+    if season < FIRST_SEASON or season > this_year + 1:
         abort(404)
     if round_number < 1 or round_number > 30:
         abort(404)
@@ -331,8 +355,12 @@ def race_results(season, round_number):
     except Exception:
         app.logger.exception("Could not load results")
         return f"<p class='note'>{t['unavailable']}</p>", 503
-    return render_template("results.html", r=results, t=t)
-
+    response = make_response(render_template("results.html", r=results, t=t))
+    if season < this_year:
+        response.headers["Cache-Control"] = "public, max-age=86400"
+    else:
+        response.headers["Cache-Control"] = "public, max-age=300"
+    return response
 
 @app.route("/about")
 def about():

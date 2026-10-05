@@ -62,7 +62,7 @@
                 {% endfor %}
             </ul>
             {% if race.status != "upcoming" %}
-            <div class="results" data-url="/results/{{ season }}/{{ race.round }}">
+                <div class="results" data-url="/results/{{ season }}/{{ race.round }}?lang={{ lang }}"></div>
                 <p class="note loading">{{ t.loading }}</p>
             </div>
             {% endif %}
