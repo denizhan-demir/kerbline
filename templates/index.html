@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ t.title }}</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏁</text></svg>">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body data-locale="{{ 'tr-TR' if lang == 'tr' else 'en-GB' }}" data-tz-yours="{{ t.tz_yours }}" data-tz-track="{{ t.tz_track }}">
@@ -62,7 +63,7 @@
                 {% endfor %}
             </ul>
             {% if race.status != "upcoming" %}
-                <div class="results" data-url="/results/{{ season }}/{{ race.round }}?lang={{ lang }}"></div>
+            <div class="results" data-url="/results/{{ season }}/{{ race.round }}?lang={{ lang }}">
                 <p class="note loading">{{ t.loading }}</p>
             </div>
             {% endif %}
@@ -74,6 +75,7 @@
     <script>
         let mode = "yours";
         const locale = document.body.dataset.locale;
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
         const DATE_FORMAT = { day: "2-digit", month: "2-digit", year: "numeric" };
         const DAY_FORMAT = { weekday: "long", day: "numeric", month: "long" };
@@ -114,20 +116,6 @@
                 note.textContent = document.body.dataset.tzTrack;
             }
         }
-
-        document.getElementById("btn-yours").addEventListener("click", function () {
-            mode = "yours";
-            render();
-        });
-
-        document.getElementById("btn-track").addEventListener("click", function () {
-            mode = "track";
-            render();
-        });
-
-        render();
-
-        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
         function setupDetails(details, onOpen) {
             const summary = details.querySelector("summary");
@@ -170,21 +158,39 @@
                 return;
             }
             box.dataset.loaded = "true";
+            const controller = new AbortController();
+            const timer = setTimeout(function () {
+                controller.abort();
+            }, 15000);
             try {
-                const response = await fetch(box.dataset.url);
-                box.innerHTML = await response.text();
+                const response = await fetch(box.dataset.url, { signal: controller.signal });
+                const html = (await response.text()).trim();
                 if (!response.ok) {
                     delete box.dataset.loaded;
-                    return;
                 }
+                box.innerHTML = html;
                 for (const inner of box.querySelectorAll("details.full-results")) {
                     setupDetails(inner, null);
                 }
             } catch (error) {
                 box.innerHTML = "";
                 delete box.dataset.loaded;
+            } finally {
+                clearTimeout(timer);
             }
         }
+
+        document.getElementById("btn-yours").addEventListener("click", function () {
+            mode = "yours";
+            render();
+        });
+
+        document.getElementById("btn-track").addEventListener("click", function () {
+            mode = "track";
+            render();
+        });
+
+        render();
 
         for (const details of document.querySelectorAll("details.race:not(.tbc)")) {
             setupDetails(details, loadResults);

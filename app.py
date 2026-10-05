@@ -1,9 +1,10 @@
-import time
-import requests
-from datetime import datetime, timedelta, timezone
-from timezonefinder import TimezoneFinder
-from flask import Flask, render_template, abort, request, make_response
 import threading
+import time
+from datetime import datetime, timedelta, timezone
+
+import requests
+from flask import Flask, abort, make_response, render_template, request
+from timezonefinder import TimezoneFinder
 
 app = Flask(__name__)
 
@@ -67,7 +68,7 @@ TRANSLATIONS = {
         "tz_yours": "Times in your time zone",
         "tz_track": "Times in each circuit's local time",
         "not_available": "The {season} calendar isn't available yet.",
-        "unavailable": "Calendar data is unavailable right now. Please try again later.",
+        "unavailable": "Data is unavailable right now. Please try again later.",
         "loading": "Loading results…",
         "next": "NEXT",
         "tbc": "TBC",
@@ -114,6 +115,9 @@ TRANSLATIONS = {
 
 cache = {}
 tf = TimezoneFinder()
+rate_lock = threading.Lock()
+last_request_at = 0.0
+blocked_until = datetime.min
 
 
 def get_lang():
@@ -129,9 +133,6 @@ def to_flag(code):
         result += chr(0x1F1E6 + ord(letter) - ord("A"))
     return result
 
-rate_lock = threading.Lock()
-last_request_at = 0.0
-
 
 def wait_for_rate_limit():
     global last_request_at
@@ -140,8 +141,6 @@ def wait_for_rate_limit():
         if elapsed < 0.25:
             time.sleep(0.25 - elapsed)
         last_request_at = time.monotonic()
-
-blocked_until = datetime.min
 
 
 def get_cached(url, max_age):
@@ -362,9 +361,15 @@ def race_results(season, round_number):
         response.headers["Cache-Control"] = "public, max-age=300"
     return response
 
+
 @app.route("/about")
 def about():
     return "<h1>About</h1><p>Track every F1 race weekend in your local time.</p>"
+
+
+@app.route("/favicon.ico")
+def favicon():
+    return "", 204
 
 
 if __name__ == "__main__":
