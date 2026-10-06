@@ -15,6 +15,8 @@ ID = "f1"
 NAME = "Formula 1"
 SHORT = "F1"
 FIRST_SEASON = 2020
+PARTICIPANT = "driver"
+PARTICIPANTS = "drivers"
 
 BASE_URL = "https://api.jolpi.ca/ergast/f1"
 

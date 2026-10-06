@@ -583,3 +583,11 @@ h1 .season { color: var(--muted); font-weight: normal; }
 @media (max-width: 600px) {
     .team-cell { display: none; }
 }
+
+.footer {
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 12px;
+}

@@ -85,7 +85,7 @@ def get_cached(url, max_age):
 
 
 def make_session(name, date, time_str=None):
-    when = datetime.fromisoformat(date + "T" + (time_str or "00:00:00Z"))
+    when = datetime.fromisoformat(date + "T" + (time_str or "23:59:59Z"))
     return {
         "name": name,
         "when": when,

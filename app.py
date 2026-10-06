@@ -3,11 +3,12 @@ from datetime import datetime
 from flask import Flask, abort, make_response, redirect, render_template, request, url_for
 
 import f1
+import motogp
 from core import add_statuses
 
 app = Flask(__name__)
 
-SERIES = {f1.ID: f1}
+SERIES = {f1.ID: f1, motogp.ID: motogp}
 DEFAULT_SERIES = f1.ID
 
 TRANSLATIONS = {
@@ -18,6 +19,9 @@ TRANSLATIONS = {
         "drivers": "Drivers",
         "teams": "Teams",
         "wins": "Wins",
+        "rider": "Rider",
+        "riders": "Riders",
+        "disclaimer": "Unofficial fan project, not affiliated with Formula 1, MotoGP or their rights holders. F1 data: Jolpica-F1. MotoGP data: motogp.com.",
         "your_time": "Your time",
         "track_time": "Track time",
         "tz_yours": "Times in your time zone",
@@ -46,6 +50,9 @@ TRANSLATIONS = {
         "drivers": "Pilotlar",
         "teams": "Takımlar",
         "wins": "Galibiyet",
+        "rider": "Pilot",
+        "riders": "Pilotlar",
+        "disclaimer": "Resmi olmayan bir hobi projesidir; Formula 1, MotoGP ya da hak sahipleriyle bir bağlantısı yoktur. F1 verileri: Jolpica-F1. MotoGP verileri: motogp.com.",
         "your_time": "Senin saatin",
         "track_time": "Pist saati",
         "tz_yours": "Saatler senin saat dilimine göre",

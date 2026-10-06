@@ -7,13 +7,13 @@
     {% endif %}
 
     {% if standings.drivers %}
-    <h2 class="section-title">{{ t.drivers }}</h2>
+    <h2 class="section-title">{{ t[series.PARTICIPANTS] }}</h2>
     <div class="table-wrap">
         <table class="standings-table">
             <thead>
                 <tr>
                     <th>{{ t.pos }}</th>
-                    <th>{{ t.driver }}</th>
+                    <th>{{ t[series.PARTICIPANT] }}</th>
                     <th class="team-cell">{{ t.team }}</th>
                     <th class="pts">{{ t.wins }}</th>
                     <th class="pts">{{ t.points }}</th>
@@ -54,7 +54,7 @@
                 <tr style="--team: {{ row.color }}; --pct: {{ row.pct }}%; --k: {{ loop.index0 }}">
                     <td class="pos">{{ row.position }}</td>
                     <td>
-                        <div>{{ row.flag }} {{ row.name }}</div>
+                        <div>{{ row.name }}</div>
                         <div class="points-bar"></div>
                     </td>
                     <td class="pts">{{ row.wins }}</td>
