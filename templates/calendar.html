@@ -8,13 +8,37 @@
 <p class="note" id="tz-note"></p>
 
 <section class="page-content">
+    {% set next_race = races | selectattr("status", "equalto", "next") | first %}
+    {% if next_race %}
+    <a class="hero" href="#round-{{ next_race.round }}">
+        <div class="hero-label">{{ t.next_race }} · {{ t.round }} {{ next_race.round }}</div>
+        <div class="hero-name">{{ next_race.flag }} {{ next_race.name }}</div>
+        <div class="hero-meta">
+            {{ next_race.country }} ·
+            {% if next_race.main.tbc %}
+            {{ next_race.main.date }}
+            {% else %}
+            <span class="hero-date" data-utc="{{ next_race.main.utc }}" data-tz="{{ next_race.tz }}"></span>
+            {% endif %}
+        </div>
+        {% if not next_race.main.tbc %}
+        <div class="countdown" data-target="{{ next_race.main.utc }}">
+            <div><span data-unit="days">–</span><small>{{ t.days }}</small></div>
+            <div><span data-unit="hours">–</span><small>{{ t.hours }}</small></div>
+            <div><span data-unit="minutes">–</span><small>{{ t.minutes }}</small></div>
+            <div><span data-unit="seconds">–</span><small>{{ t.seconds }}</small></div>
+        </div>
+        {% endif %}
+    </a>
+    {% endif %}
+
     {% if not races %}
     <p>{{ t.not_available.format(season=season) }}</p>
     {% endif %}
 
     {% for race in races %}
     {% set expandable = race.lazy or not race.main.tbc %}
-    <details class="race {{ race.status }}{% if not expandable %} static{% endif %}" style="--i: {{ loop.index0 }}" {% if race.status == "next" %}open{% endif %}>
+    <details id="round-{{ race.round }}" class="race {{ race.status }}{% if not expandable %} static{% endif %}" style="--i: {{ loop.index0 }}" {% if race.status == "next" %}open{% endif %}>
         <summary>
             <span class="round">{{ race.round }}</span>
             <span class="name">{{ race.flag }} {{ race.name }} <small>{{ race.country }}</small></span>
@@ -48,7 +72,9 @@
             {% endif %}
             {% if race.lazy or race.status != "upcoming" %}
             <div class="results" data-url="/results/{{ series.ID }}/{{ season }}/{{ race.round }}?lang={{ lang }}">
-                <p class="note loading">{{ t.loading }}</p>
+                <div class="skeleton" role="status" aria-label="{{ t.loading }}">
+                    <span></span><span></span><span></span>
+                </div>
             </div>
             {% endif %}
         </div>
@@ -59,151 +85,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-    let mode = "yours";
-    const locale = document.body.dataset.locale;
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    const EASE_OUT = "cubic-bezier(0.22, 1, 0.36, 1)";
-    const EASE_IN_OUT = "cubic-bezier(0.4, 0, 0.2, 1)";
-
-    const DATE_FORMAT = { day: "2-digit", month: "2-digit", year: "numeric" };
-    const DAY_FORMAT = { weekday: "long", day: "numeric", month: "long" };
-    const TIME_FORMAT = { hour: "2-digit", minute: "2-digit" };
-
-    function format(utc, timeZone, options) {
-        const finalOptions = { ...options };
-        if (timeZone) {
-            finalOptions.timeZone = timeZone;
-        }
-        return new Date(utc).toLocaleString(locale, finalOptions);
-    }
-
-    function render() {
-        for (const el of document.querySelectorAll(".date[data-utc]")) {
-            const timeZone = mode === "track" ? el.dataset.tz : null;
-            el.textContent = format(el.dataset.utc, timeZone, DATE_FORMAT);
-        }
-
-        for (const list of document.querySelectorAll(".sessions")) {
-            let previousDay = "";
-            for (const item of list.querySelectorAll("li[data-utc]")) {
-                const timeZone = mode === "track" ? item.dataset.tz : null;
-                const day = format(item.dataset.utc, timeZone, DAY_FORMAT);
-                item.querySelector(".time").textContent = format(item.dataset.utc, timeZone, TIME_FORMAT);
-                item.querySelector(".day").textContent = day === previousDay ? "" : day;
-                previousDay = day;
-            }
-        }
-
-        document.getElementById("btn-yours").classList.toggle("active", mode === "yours");
-        document.getElementById("btn-track").classList.toggle("active", mode === "track");
-
-        const note = document.getElementById("tz-note");
-        if (mode === "yours") {
-            note.textContent = document.body.dataset.tzYours + " (" + Intl.DateTimeFormat().resolvedOptions().timeZone + ")";
-        } else {
-            note.textContent = document.body.dataset.tzTrack;
-        }
-    }
-
-    function setupDetails(details, onOpen) {
-        const summary = details.querySelector("summary");
-        const content = details.querySelector(".content");
-
-        summary.addEventListener("click", function (event) {
-            if (!details.open && onOpen) {
-                onOpen(details);
-            }
-            if (reduceMotion) {
-                return;
-            }
-            event.preventDefault();
-            if (content.getAnimations().length > 0) {
-                return;
-            }
-
-            if (details.open) {
-                details.classList.add("closing");
-                const closing = content.animate(
-                    [
-                        { height: content.offsetHeight + "px", opacity: 1 },
-                        { height: "0px", opacity: 0 }
-                    ],
-                    { duration: 320, easing: EASE_IN_OUT, fill: "forwards" }
-                );
-                closing.onfinish = function () {
-                    details.open = false;
-                    details.classList.remove("closing");
-                    closing.cancel();
-                };
-            } else {
-                details.open = true;
-                content.animate(
-                    [
-                        { height: "0px", opacity: 0 },
-                        { height: content.offsetHeight + "px", opacity: 1 }
-                    ],
-                    { duration: 520, easing: EASE_OUT }
-                );
-            }
-        });
-    }
-
-    async function loadResults(details) {
-        const box = details.querySelector(".results[data-url]");
-        if (!box || box.dataset.loaded) {
-            return;
-        }
-        box.dataset.loaded = "true";
-        const controller = new AbortController();
-        const timer = setTimeout(function () {
-            controller.abort();
-        }, 15000);
-        try {
-            const response = await fetch(box.dataset.url, { signal: controller.signal });
-            const html = (await response.text()).trim();
-            if (!response.ok) {
-                delete box.dataset.loaded;
-            }
-            const startHeight = box.offsetHeight;
-            box.innerHTML = html;
-            render();
-            const endHeight = box.offsetHeight;
-            if (!reduceMotion && details.open && startHeight !== endHeight) {
-                box.animate(
-                    [{ height: startHeight + "px" }, { height: endHeight + "px" }],
-                    { duration: 500, easing: EASE_OUT }
-                );
-            }
-            for (const inner of box.querySelectorAll("details.full-results")) {
-                setupDetails(inner, null);
-            }
-        } catch (error) {
-            box.innerHTML = "";
-            delete box.dataset.loaded;
-        } finally {
-            clearTimeout(timer);
-        }
-    }
-
-    document.getElementById("btn-yours").addEventListener("click", function () {
-        mode = "yours";
-        render();
-    });
-
-    document.getElementById("btn-track").addEventListener("click", function () {
-        mode = "track";
-        render();
-    });
-
-    render();
-
-    for (const details of document.querySelectorAll("details.race:not(.static)")) {
-        setupDetails(details, loadResults);
-        if (details.open) {
-            loadResults(details);
-        }
-    }
-</script>
+<script src="{{ url_for('static', filename='calendar.js') }}"></script>
 {% endblock %}
