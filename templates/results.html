@@ -56,7 +56,7 @@
                 </thead>
                 <tbody>
                     {% for row in r.full_results %}
-                    <tr style="--team: {{ row.color }}">
+                    <tr style="--team: {{ row.color }}; --k: {{ loop.index0 }}">
                         <td class="pos">{{ row.position }}</td>
                         <td>{{ row.flag }} {{ row.name }}</td>
                         <td class="team-cell">{{ row.team }}</td>

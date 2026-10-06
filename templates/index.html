@@ -28,54 +28,60 @@
     </div>
     <p class="note" id="tz-note"></p>
 
-    {% if not races %}
-    <p>{{ t.not_available.format(season=season) }}</p>
-    {% endif %}
+    <main class="race-list">
+        {% if not races %}
+        <p>{{ t.not_available.format(season=season) }}</p>
+        {% endif %}
 
-    {% for race in races %}
-    <details class="race {{ race.status }}{% if race.main.tbc %} tbc{% endif %}" {% if race.status == "next" %}open{% endif %}>
-        <summary>
-            <span class="round">{{ race.round }}</span>
-            <span class="name">{{ race.flag }} {{ race.name }} <small>{{ race.country }}</small></span>
-            {% if race.status == "next" %}<span class="badge">{{ t.next }}</span>{% endif %}
-            {% if race.main.tbc %}
-            <span class="date">{{ race.main.date }}</span>
-            {% else %}
-            <span class="date" data-utc="{{ race.main.utc }}" data-tz="{{ race.tz }}"></span>
-            {% endif %}
-        </summary>
-        {% if not race.main.tbc %}
-        <div class="content">
-            <ul class="sessions">
-                {% for session in race.sessions %}
-                {% if session.tbc %}
-                <li>
-                    <span>{{ t.get(session.name, session.name) }}</span>
-                    <span>{{ session.date }} · {{ t.tbc }}</span>
-                </li>
+        {% for race in races %}
+        <details class="race {{ race.status }}{% if race.main.tbc %} tbc{% endif %}" style="--i: {{ loop.index0 }}" {% if race.status == "next" %}open{% endif %}>
+            <summary>
+                <span class="round">{{ race.round }}</span>
+                <span class="name">{{ race.flag }} {{ race.name }} <small>{{ race.country }}</small></span>
+                {% if race.status == "next" %}<span class="badge">{{ t.next }}</span>{% endif %}
+                {% if race.main.tbc %}
+                <span class="date">{{ race.main.date }}</span>
                 {% else %}
-                <li data-utc="{{ session.utc }}" data-tz="{{ race.tz }}">
-                    <span class="day"></span>
-                    <span>{{ t.get(session.name, session.name) }}</span>
-                    <span class="time"></span>
-                </li>
+                <span class="date" data-utc="{{ race.main.utc }}" data-tz="{{ race.tz }}"></span>
+                <span class="chevron" aria-hidden="true"></span>
                 {% endif %}
-                {% endfor %}
-            </ul>
-            {% if race.status != "upcoming" %}
-            <div class="results" data-url="/results/{{ season }}/{{ race.round }}?lang={{ lang }}">
-                <p class="note loading">{{ t.loading }}</p>
+            </summary>
+            {% if not race.main.tbc %}
+            <div class="content">
+                <ul class="sessions">
+                    {% for session in race.sessions %}
+                    {% if session.tbc %}
+                    <li style="--j: {{ loop.index0 }}">
+                        <span>{{ t.get(session.name, session.name) }}</span>
+                        <span>{{ session.date }} · {{ t.tbc }}</span>
+                    </li>
+                    {% else %}
+                    <li data-utc="{{ session.utc }}" data-tz="{{ race.tz }}" style="--j: {{ loop.index0 }}">
+                        <span class="day"></span>
+                        <span>{{ t.get(session.name, session.name) }}</span>
+                        <span class="time"></span>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                </ul>
+                {% if race.status != "upcoming" %}
+                <div class="results" data-url="/results/{{ season }}/{{ race.round }}?lang={{ lang }}">
+                    <p class="note loading">{{ t.loading }}</p>
+                </div>
+                {% endif %}
             </div>
             {% endif %}
-        </div>
-        {% endif %}
-    </details>
-    {% endfor %}
+        </details>
+        {% endfor %}
+    </main>
 
     <script>
         let mode = "yours";
         const locale = document.body.dataset.locale;
         const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        const EASE_OUT = "cubic-bezier(0.22, 1, 0.36, 1)";
+        const EASE_IN_OUT = "cubic-bezier(0.4, 0, 0.2, 1)";
 
         const DATE_FORMAT = { day: "2-digit", month: "2-digit", year: "numeric" };
         const DAY_FORMAT = { weekday: "long", day: "numeric", month: "long" };
@@ -134,19 +140,27 @@
                 }
 
                 if (details.open) {
+                    details.classList.add("closing");
                     const closing = content.animate(
-                        [{ height: content.offsetHeight + "px" }, { height: "0px" }],
-                        { duration: 300, easing: "ease-in-out", fill: "forwards" }
+                        [
+                            { height: content.offsetHeight + "px", opacity: 1 },
+                            { height: "0px", opacity: 0 }
+                        ],
+                        { duration: 320, easing: EASE_IN_OUT, fill: "forwards" }
                     );
                     closing.onfinish = function () {
                         details.open = false;
+                        details.classList.remove("closing");
                         closing.cancel();
                     };
                 } else {
                     details.open = true;
                     content.animate(
-                        [{ height: "0px" }, { height: content.offsetHeight + "px" }],
-                        { duration: 400, easing: "ease-out" }
+                        [
+                            { height: "0px", opacity: 0 },
+                            { height: content.offsetHeight + "px", opacity: 1 }
+                        ],
+                        { duration: 520, easing: EASE_OUT }
                     );
                 }
             });
@@ -168,7 +182,15 @@
                 if (!response.ok) {
                     delete box.dataset.loaded;
                 }
+                const startHeight = box.offsetHeight;
                 box.innerHTML = html;
+                const endHeight = box.offsetHeight;
+                if (!reduceMotion && details.open && startHeight !== endHeight) {
+                    box.animate(
+                        [{ height: startHeight + "px" }, { height: endHeight + "px" }],
+                        { duration: 500, easing: EASE_OUT }
+                    );
+                }
                 for (const inner of box.querySelectorAll("details.full-results")) {
                     setupDetails(inner, null);
                 }
