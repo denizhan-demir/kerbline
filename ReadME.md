@@ -1,4 +1,4 @@
-# F1 Calendar
+# Kerbline
 
 A project that shows the Formula 1 season calendar, using data from the Jolpica-F1 API.
 Built while learning Python. Work in progress.

@@ -230,8 +230,9 @@ h1 .season { color: var(--muted); font-weight: normal; }
 .race > summary::-webkit-details-marker { display: none; }
 .race > summary:hover { background: var(--card); }
 .race.done > summary { opacity: 0.6; }
-.race.tbc > summary { cursor: default; }
-.race.tbc > summary:hover { background: none; }
+.race.static > summary { cursor: default; }
+.race.static > summary:hover { background: none; }
+.results .sessions { padding: 0 0 4px; }
 
 .round { color: var(--muted); width: 24px; }
 .name { flex: 1; font-weight: bold; }

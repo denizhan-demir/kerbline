@@ -1,3 +1,15 @@
+{% if r.sessions %}
+<ul class="sessions">
+    {% for session in r.sessions %}
+    <li data-utc="{{ session.utc }}" data-tz="{{ r.tz }}" style="--j: {{ loop.index0 }}">
+        <span class="day"></span>
+        <span>{{ t.get(session.name, session.name) }}</span>
+        <span class="time"></span>
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
+
 {% if r.sprint_grid %}
 <p class="label">{{ t.sprint_qualifying }}</p>
 <div class="chips">

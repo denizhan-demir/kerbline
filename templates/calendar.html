@@ -13,7 +13,8 @@
     {% endif %}
 
     {% for race in races %}
-    <details class="race {{ race.status }}{% if race.main.tbc %} tbc{% endif %}" style="--i: {{ loop.index0 }}" {% if race.status == "next" %}open{% endif %}>
+    {% set expandable = race.lazy or not race.main.tbc %}
+    <details class="race {{ race.status }}{% if not expandable %} static{% endif %}" style="--i: {{ loop.index0 }}" {% if race.status == "next" %}open{% endif %}>
         <summary>
             <span class="round">{{ race.round }}</span>
             <span class="name">{{ race.flag }} {{ race.name }} <small>{{ race.country }}</small></span>
@@ -22,11 +23,12 @@
             <span class="date">{{ race.main.date }}</span>
             {% else %}
             <span class="date" data-utc="{{ race.main.utc }}" data-tz="{{ race.tz }}"></span>
-            <span class="chevron" aria-hidden="true"></span>
             {% endif %}
+            {% if expandable %}<span class="chevron" aria-hidden="true"></span>{% endif %}
         </summary>
-        {% if not race.main.tbc %}
+        {% if expandable %}
         <div class="content">
+            {% if race.sessions %}
             <ul class="sessions">
                 {% for session in race.sessions %}
                 {% if session.tbc %}
@@ -43,7 +45,8 @@
                 {% endif %}
                 {% endfor %}
             </ul>
-            {% if race.status != "upcoming" %}
+            {% endif %}
+            {% if race.lazy or race.status != "upcoming" %}
             <div class="results" data-url="/results/{{ series.ID }}/{{ season }}/{{ race.round }}?lang={{ lang }}">
                 <p class="note loading">{{ t.loading }}</p>
             </div>
@@ -165,6 +168,7 @@
             }
             const startHeight = box.offsetHeight;
             box.innerHTML = html;
+            render();
             const endHeight = box.offsetHeight;
             if (!reduceMotion && details.open && startHeight !== endHeight) {
                 box.animate(
@@ -195,7 +199,7 @@
 
     render();
 
-    for (const details of document.querySelectorAll("details.race:not(.tbc)")) {
+    for (const details of document.querySelectorAll("details.race:not(.static)")) {
         setupDetails(details, loadResults);
         if (details.open) {
             loadResults(details);

@@ -19,6 +19,41 @@ TEAM_COLORS = {
     "yamaha": "#2F6BFF",
 }
 
+SESSION_NAMES = {
+    "FP": "Free Practice",
+    "PR": "Practice",
+    "Q": "Qualifying",
+    "SPR": "Sprint",
+    "WUP": "Warm Up",
+    "RAC": "Race",
+}
+
+COUNTRY_TIMEZONES = {
+    "AR": "America/Argentina/Buenos_Aires",
+    "AT": "Europe/Vienna",
+    "AU": "Australia/Melbourne",
+    "BR": "America/Sao_Paulo",
+    "CZ": "Europe/Prague",
+    "DE": "Europe/Berlin",
+    "ES": "Europe/Madrid",
+    "FR": "Europe/Paris",
+    "GB": "Europe/London",
+    "HU": "Europe/Budapest",
+    "ID": "Asia/Makassar",
+    "IN": "Asia/Kolkata",
+    "IT": "Europe/Rome",
+    "JP": "Asia/Tokyo",
+    "KZ": "Asia/Almaty",
+    "MY": "Asia/Kuala_Lumpur",
+    "NL": "Europe/Amsterdam",
+    "PT": "Europe/Lisbon",
+    "QA": "Asia/Qatar",
+    "SM": "Europe/San_Marino",
+    "TH": "Asia/Bangkok",
+    "TR": "Europe/Istanbul",
+    "US": "America/Chicago",
+}
+
 
 def max_age_for(season):
     if season < datetime.now().year:
@@ -50,22 +85,24 @@ def pretty_name(name):
     return name.title().replace(" Of ", " of ").replace(" The ", " the ")
 
 
-# ---------- Calendar ----------
-
-def get_races(season):
+def grand_prix_events(season):
     season_uuid = season_id(season)
     if season_uuid is None:
         return []
-
     events = get_cached(f"{BASE_URL}/results/events?seasonUuid={season_uuid}", timedelta(hours=1))
     grand_prix = []
     for event in events:
         if not event.get("test"):
             grand_prix.append(event)
     grand_prix.sort(key=lambda e: e["date_start"])
+    return grand_prix
 
+
+# ---------- Calendar ----------
+
+def get_races(season):
     races = []
-    for number, event in enumerate(grand_prix, start=1):
+    for number, event in enumerate(grand_prix_events(season), start=1):
         country = event["country"]
         races.append({
             "round": str(number),
@@ -73,21 +110,116 @@ def get_races(season):
             "country": country["name"],
             "flag": to_flag(country["iso"]),
             "main": make_session("Race", event["date_end"]),
-            "tz": "",
+            "tz": COUNTRY_TIMEZONES.get(country["iso"], ""),
             "sessions": [],
+            "lazy": True,
         })
     return races
 
 
-# ---------- Race results (next step) ----------
+# ---------- Sessions and results ----------
+
+def session_label(session):
+    name = SESSION_NAMES.get(session.get("type"), session.get("type", ""))
+    if session.get("number"):
+        name += f" {session['number']}"
+    return name
+
+
+def classification(session_id, season):
+    if session_id is None:
+        return []
+    url = f"{BASE_URL}/results/session/{session_id}/classification?test=false"
+    return get_cached(url, max_age_for(season)).get("classification", [])
+
+
+def short_name(full_name):
+    parts = full_name.split()
+    if len(parts) < 2:
+        return full_name
+    return parts[0][0] + ". " + parts[-1]
+
+
+def make_rider(row):
+    rider = row.get("rider", {})
+    full_name = rider.get("full_name", "")
+    return {
+        "name": full_name,
+        "code": short_name(full_name),
+        "flag": to_flag(rider.get("country", {}).get("iso", "")),
+        "team": row.get("team", {}).get("name", ""),
+        "color": team_color(row.get("constructor", {}).get("name", "")),
+    }
+
+
+def make_result_row(row):
+    result = make_rider(row)
+    position = row.get("position")
+    gap = row.get("gap") or {}
+    result["position"] = position if position else "DNF"
+    result["points"] = row.get("points", 0)
+    if position == 1:
+        result["time"] = row.get("time", "")
+    elif position and str(gap.get("lap", "0")) not in ("0", ""):
+        result["time"] = f"+{gap['lap']} lap"
+    elif position and gap.get("first"):
+        result["time"] = "+" + gap["first"]
+    else:
+        result["time"] = row.get("status", "")
+    return result
+
+
+def top3(rows):
+    riders = []
+    for row in rows[:3]:
+        riders.append(make_rider(row))
+    return riders
+
+
+def full_results(rows):
+    result = []
+    for row in rows:
+        result.append(make_result_row(row))
+    return result
+
 
 def get_race_results(season, round_number):
+    empty = {"sessions": [], "tz": "", "race_top3": [], "full_results": [],
+             "sprint_winner": None, "sprint_grid": [], "quali": []}
+
+    events = grand_prix_events(season)
+    if round_number > len(events):
+        return empty
+    event = events[round_number - 1]
+
+    season_uuid = season_id(season)
+    category_uuid = category_id(season_uuid)
+    url = f"{BASE_URL}/results/sessions?eventUuid={event['id']}&categoryUuid={category_uuid}"
+    sessions = get_cached(url, max_age_for(season))
+
+    session_list = []
+    finished = {}
+    for session in sessions:
+        if not session.get("date"):
+            continue
+        label = session_label(session)
+        session_list.append(make_session(label, session["date"][:10], session["date"][11:]))
+        if session.get("status") == "FINISHED":
+            finished[label] = session["id"]
+    session_list.sort(key=lambda s: s["utc"])
+
+    race = classification(finished.get("Race"), season)
+    sprint = classification(finished.get("Sprint"), season)
+    quali = classification(finished.get("Qualifying 2"), season)
+
     return {
-        "race_top3": [],
-        "full_results": [],
-        "sprint_winner": None,
+        "sessions": session_list,
+        "tz": COUNTRY_TIMEZONES.get(event["country"]["iso"], ""),
+        "race_top3": top3(race),
+        "full_results": full_results(race),
+        "sprint_winner": make_rider(sprint[0]) if sprint else None,
         "sprint_grid": [],
-        "quali": [],
+        "quali": top3(quali),
     }
 
 
@@ -104,15 +236,10 @@ def get_standings(season):
 
     riders = []
     for row in data.get("classification", []):
-        rider = row["rider"]
-        riders.append({
-            "position": row.get("position", ""),
-            "name": rider["full_name"],
-            "flag": to_flag(rider.get("country", {}).get("iso", "")),
-            "team": row.get("team", {}).get("name", ""),
-            "color": team_color(row.get("constructor", {}).get("name", "")),
-            "points": row.get("points", 0),
-            "wins": row.get("race_wins", 0),
-        })
+        rider = make_rider(row)
+        rider["position"] = row.get("position", "")
+        rider["points"] = row.get("points", 0)
+        rider["wins"] = row.get("race_wins", 0)
+        riders.append(rider)
 
     return {"drivers": add_percentages(riders), "teams": []}

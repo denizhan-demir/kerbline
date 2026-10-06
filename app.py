@@ -13,7 +13,7 @@ DEFAULT_SERIES = f1.ID
 
 TRANSLATIONS = {
     "en": {
-        "site_name": "Motorsport Hub",
+        "site_name": "Kerbline",
         "calendar": "Calendar",
         "standings": "Standings",
         "drivers": "Drivers",
@@ -44,7 +44,7 @@ TRANSLATIONS = {
         "points": "Pts",
     },
     "tr": {
-        "site_name": "Motorsport Hub",
+        "site_name": "Kerbline",
         "calendar": "Takvim",
         "standings": "Puan Durumu",
         "drivers": "Pilotlar",
@@ -79,6 +79,12 @@ TRANSLATIONS = {
         "Sprint Qualifying": "Sprint Sıralama",
         "Qualifying": "Sıralama",
         "Race": "Yarış",
+        "Free Practice 1": "1. Serbest Antrenman",
+        "Free Practice 2": "2. Serbest Antrenman",
+        "Practice": "Antrenman",
+        "Qualifying 1": "Sıralama 1",
+        "Qualifying 2": "Sıralama 2",
+        "Warm Up": "Isınma",
     },
 }
 
