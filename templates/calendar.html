@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="toggle">
+    <button id="btn-yours" class="active">{{ t.your_time }}</button>
+    <button id="btn-track">{{ t.track_time }}</button>
+</div>
+<p class="note" id="tz-note"></p>
+
+<section class="page-content">
+    {% if not races %}
+    <p>{{ t.not_available.format(season=season) }}</p>
+    {% endif %}
+
+    {% for race in races %}
+    <details class="race {{ race.status }}{% if race.main.tbc %} tbc{% endif %}" style="--i: {{ loop.index0 }}" {% if race.status == "next" %}open{% endif %}>
+        <summary>
+            <span class="round">{{ race.round }}</span>
+            <span class="name">{{ race.flag }} {{ race.name }} <small>{{ race.country }}</small></span>
+            {% if race.status == "next" %}<span class="badge">{{ t.next }}</span>{% endif %}
+            {% if race.main.tbc %}
+            <span class="date">{{ race.main.date }}</span>
+            {% else %}
+            <span class="date" data-utc="{{ race.main.utc }}" data-tz="{{ race.tz }}"></span>
+            <span class="chevron" aria-hidden="true"></span>
+            {% endif %}
+        </summary>
+        {% if not race.main.tbc %}
+        <div class="content">
+            <ul class="sessions">
+                {% for session in race.sessions %}
+                {% if session.tbc %}
+                <li style="--j: {{ loop.index0 }}">
+                    <span>{{ t.get(session.name, session.name) }}</span>
+                    <span>{{ session.date }} · {{ t.tbc }}</span>
+                </li>
+                {% else %}
+                <li data-utc="{{ session.utc }}" data-tz="{{ race.tz }}" style="--j: {{ loop.index0 }}">
+                    <span class="day"></span>
+                    <span>{{ t.get(session.name, session.name) }}</span>
+                    <span class="time"></span>
+                </li>
+                {% endif %}
+                {% endfor %}
+            </ul>
+            {% if race.status != "upcoming" %}
+            <div class="results" data-url="/results/{{ series.ID }}/{{ season }}/{{ race.round }}?lang={{ lang }}">
+                <p class="note loading">{{ t.loading }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </details>
+    {% endfor %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let mode = "yours";
+    const locale = document.body.dataset.locale;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const EASE_OUT = "cubic-bezier(0.22, 1, 0.36, 1)";
+    const EASE_IN_OUT = "cubic-bezier(0.4, 0, 0.2, 1)";
+
+    const DATE_FORMAT = { day: "2-digit", month: "2-digit", year: "numeric" };
+    const DAY_FORMAT = { weekday: "long", day: "numeric", month: "long" };
+    const TIME_FORMAT = { hour: "2-digit", minute: "2-digit" };
+
+    function format(utc, timeZone, options) {
+        const finalOptions = { ...options };
+        if (timeZone) {
+            finalOptions.timeZone = timeZone;
+        }
+        return new Date(utc).toLocaleString(locale, finalOptions);
+    }
+
+    function render() {
+        for (const el of document.querySelectorAll(".date[data-utc]")) {
+            const timeZone = mode === "track" ? el.dataset.tz : null;
+            el.textContent = format(el.dataset.utc, timeZone, DATE_FORMAT);
+        }
+
+        for (const list of document.querySelectorAll(".sessions")) {
+            let previousDay = "";
+            for (const item of list.querySelectorAll("li[data-utc]")) {
+                const timeZone = mode === "track" ? item.dataset.tz : null;
+                const day = format(item.dataset.utc, timeZone, DAY_FORMAT);
+                item.querySelector(".time").textContent = format(item.dataset.utc, timeZone, TIME_FORMAT);
+                item.querySelector(".day").textContent = day === previousDay ? "" : day;
+                previousDay = day;
+            }
+        }
+
+        document.getElementById("btn-yours").classList.toggle("active", mode === "yours");
+        document.getElementById("btn-track").classList.toggle("active", mode === "track");
+
+        const note = document.getElementById("tz-note");
+        if (mode === "yours") {
+            note.textContent = document.body.dataset.tzYours + " (" + Intl.DateTimeFormat().resolvedOptions().timeZone + ")";
+        } else {
+            note.textContent = document.body.dataset.tzTrack;
+        }
+    }
+
+    function setupDetails(details, onOpen) {
+        const summary = details.querySelector("summary");
+        const content = details.querySelector(".content");
+
+        summary.addEventListener("click", function (event) {
+            if (!details.open && onOpen) {
+                onOpen(details);
+            }
+            if (reduceMotion) {
+                return;
+            }
+            event.preventDefault();
+            if (content.getAnimations().length > 0) {
+                return;
+            }
+
+            if (details.open) {
+                details.classList.add("closing");
+                const closing = content.animate(
+                    [
+                        { height: content.offsetHeight + "px", opacity: 1 },
+                        { height: "0px", opacity: 0 }
+                    ],
+                    { duration: 320, easing: EASE_IN_OUT, fill: "forwards" }
+                );
+                closing.onfinish = function () {
+                    details.open = false;
+                    details.classList.remove("closing");
+                    closing.cancel();
+                };
+            } else {
+                details.open = true;
+                content.animate(
+                    [
+                        { height: "0px", opacity: 0 },
+                        { height: content.offsetHeight + "px", opacity: 1 }
+                    ],
+                    { duration: 520, easing: EASE_OUT }
+                );
+            }
+        });
+    }
+
+    async function loadResults(details) {
+        const box = details.querySelector(".results[data-url]");
+        if (!box || box.dataset.loaded) {
+            return;
+        }
+        box.dataset.loaded = "true";
+        const controller = new AbortController();
+        const timer = setTimeout(function () {
+            controller.abort();
+        }, 15000);
+        try {
+            const response = await fetch(box.dataset.url, { signal: controller.signal });
+            const html = (await response.text()).trim();
+            if (!response.ok) {
+                delete box.dataset.loaded;
+            }
+            const startHeight = box.offsetHeight;
+            box.innerHTML = html;
+            const endHeight = box.offsetHeight;
+            if (!reduceMotion && details.open && startHeight !== endHeight) {
+                box.animate(
+                    [{ height: startHeight + "px" }, { height: endHeight + "px" }],
+                    { duration: 500, easing: EASE_OUT }
+                );
+            }
+            for (const inner of box.querySelectorAll("details.full-results")) {
+                setupDetails(inner, null);
+            }
+        } catch (error) {
+            box.innerHTML = "";
+            delete box.dataset.loaded;
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+
+    document.getElementById("btn-yours").addEventListener("click", function () {
+        mode = "yours";
+        render();
+    });
+
+    document.getElementById("btn-track").addEventListener("click", function () {
+        mode = "track";
+        render();
+    });
+
+    render();
+
+    for (const details of document.querySelectorAll("details.race:not(.tbc)")) {
+        setupDetails(details, loadResults);
+        if (details.open) {
+            loadResults(details);
+        }
+    }
+</script>
+{% endblock %}

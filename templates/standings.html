@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-content">
+    {% if not standings.drivers and not standings.teams %}
+    <p>{{ t.no_standings.format(season=season) }}</p>
+    {% endif %}
+
+    {% if standings.drivers %}
+    <h2 class="section-title">{{ t.drivers }}</h2>
+    <div class="table-wrap">
+        <table class="standings-table">
+            <thead>
+                <tr>
+                    <th>{{ t.pos }}</th>
+                    <th>{{ t.driver }}</th>
+                    <th class="team-cell">{{ t.team }}</th>
+                    <th class="pts">{{ t.wins }}</th>
+                    <th class="pts">{{ t.points }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in standings.drivers %}
+                <tr style="--team: {{ row.color }}; --pct: {{ row.pct }}%; --k: {{ loop.index0 }}">
+                    <td class="pos">{{ row.position }}</td>
+                    <td>
+                        <div>{{ row.flag }} {{ row.name }}</div>
+                        <div class="points-bar"></div>
+                    </td>
+                    <td class="team-cell">{{ row.team }}</td>
+                    <td class="pts">{{ row.wins }}</td>
+                    <td class="pts strong">{{ row.points }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if standings.teams %}
+    <h2 class="section-title">{{ t.teams }}</h2>
+    <div class="table-wrap">
+        <table class="standings-table">
+            <thead>
+                <tr>
+                    <th>{{ t.pos }}</th>
+                    <th>{{ t.team }}</th>
+                    <th class="pts">{{ t.wins }}</th>
+                    <th class="pts">{{ t.points }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in standings.teams %}
+                <tr style="--team: {{ row.color }}; --pct: {{ row.pct }}%; --k: {{ loop.index0 }}">
+                    <td class="pos">{{ row.position }}</td>
+                    <td>
+                        <div>{{ row.flag }} {{ row.name }}</div>
+                        <div class="points-bar"></div>
+                    </td>
+                    <td class="pts">{{ row.wins }}</td>
+                    <td class="pts strong">{{ row.points }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

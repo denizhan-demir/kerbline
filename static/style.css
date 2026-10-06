@@ -8,30 +8,128 @@
 }
 
 body {
+    margin: 0;
     background: var(--bg);
     color: #f0f0f0;
     font-family: -apple-system, "Segoe UI", Arial, sans-serif;
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 24px 16px;
-}
-
-h1 {
-    border-left: 6px solid var(--accent);
-    padding-left: 12px;
-    letter-spacing: -0.01em;
 }
 
 .note { color: var(--muted); }
 
-/* Header, language and season switchers */
+/* Layout */
 
-.top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
+.layout {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 40px;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 24px 16px;
 }
+
+.main { min-width: 0; }
+
+/* Sidebar */
+
+.sidebar {
+    position: sticky;
+    top: 24px;
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+
+.brand {
+    font-size: 18px;
+    font-weight: bold;
+    color: #f0f0f0;
+    text-decoration: none;
+    letter-spacing: -0.01em;
+}
+
+.series-nav { display: flex; flex-direction: column; gap: 4px; }
+
+.series-nav a {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: var(--muted);
+    text-decoration: none;
+    transition: background 0.25s, color 0.25s;
+}
+
+.series-nav a:hover,
+.series-nav a.active {
+    background: var(--card);
+    color: #f0f0f0;
+}
+
+.series-nav a.active::before {
+    content: "";
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    left: 0;
+    width: 3px;
+    border-radius: 3px;
+    background: var(--accent);
+}
+
+.series-tag {
+    min-width: 28px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--line);
+    color: #f0f0f0;
+    font-size: 11px;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* Header and tabs */
+
+h1 {
+    margin: 0 0 16px;
+    padding-left: 12px;
+    border-left: 6px solid var(--accent);
+    letter-spacing: -0.01em;
+}
+
+h1 .season { color: var(--muted); font-weight: normal; }
+
+.tabs {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+}
+
+.tabs a {
+    position: relative;
+    padding: 10px 0;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.25s;
+}
+
+.tabs a:hover,
+.tabs a.active { color: #f0f0f0; }
+
+.tabs a.active::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: -1px;
+    left: 0;
+    height: 2px;
+    background: var(--accent);
+}
+
+/* Switchers */
 
 .langs { display: flex; gap: 6px; }
 .seasons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
@@ -72,17 +170,19 @@ h1 {
     border-color: var(--accent);
 }
 
-/* Season change transition */
+/* Page transitions */
 
 @view-transition { navigation: auto; }
 
+.sidebar { view-transition-name: sidebar; }
 .top { view-transition-name: top; }
+.tabs { view-transition-name: tabs; }
 .seasons { view-transition-name: seasons; }
 .toggle { view-transition-name: toggle; }
-.race-list { view-transition-name: race-list; }
+.page-content { view-transition-name: page-content; }
 
-::view-transition-old(race-list) { animation: list-out 0.25s ease-in both; }
-::view-transition-new(race-list) { animation: none; }
+::view-transition-old(page-content) { animation: list-out 0.25s ease-in both; }
+::view-transition-new(page-content) { animation: none; }
 
 /* Race cards */
 
@@ -305,7 +405,7 @@ h1 {
     animation-delay: calc(var(--d, 0s) + 0.5s);
 }
 
-/* Full race result table */
+/* Tables (full race result and standings) */
 
 .full-results { margin-top: 18px; }
 
@@ -327,9 +427,17 @@ h1 {
 
 .table-wrap { overflow-x: auto; margin-top: 12px; }
 
-.result-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.result-table,
+.standings-table {
+    width: 100%;
+    border-collapse: collapse;
+}
 
-.result-table th {
+.result-table { font-size: 14px; }
+.standings-table { font-size: 15px; }
+
+.result-table th,
+.standings-table th {
     text-align: left;
     color: var(--muted);
     font-size: 12px;
@@ -338,26 +446,57 @@ h1 {
     padding: 6px 8px;
 }
 
-.result-table td {
+.result-table td,
+.standings-table td {
     padding: 8px;
     border-top: 1px solid var(--line);
     white-space: nowrap;
 }
 
-.full-results[open] tbody tr {
-    animation: rise 0.4s var(--ease-out) both;
-    animation-delay: calc(min(var(--k, 0), 20) * 25ms);
-}
+.standings-table td { padding: 10px 8px; }
 
-.result-table td.pos {
+.result-table td.pos,
+.standings-table td.pos {
     width: 40px;
     font-weight: bold;
     border-left: 4px solid var(--team);
 }
 
-.result-table .team-cell { color: var(--muted); }
-.result-table .time-cell { font-variant-numeric: tabular-nums; }
-.result-table .pts { text-align: right; font-variant-numeric: tabular-nums; }
+.team-cell { color: var(--muted); }
+.time-cell { font-variant-numeric: tabular-nums; }
+
+.result-table .pts,
+.standings-table .pts {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.standings-table .strong { font-weight: bold; }
+
+.full-results[open] tbody tr,
+.standings-table tbody tr {
+    animation: rise 0.4s var(--ease-out) both;
+    animation-delay: calc(min(var(--k, 0), 20) * 25ms);
+}
+
+.section-title {
+    margin: 28px 0 4px;
+    color: var(--muted);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.points-bar {
+    width: var(--pct);
+    height: 3px;
+    margin-top: 6px;
+    border-radius: 3px;
+    background: var(--team);
+    transform-origin: left;
+    animation: bar-grow 0.9s var(--ease-out) both;
+    animation-delay: calc(min(var(--k, 0), 20) * 25ms + 0.15s);
+}
 
 /* Keyframes */
 
@@ -380,6 +519,11 @@ h1 {
     to { transform: scaleY(1); }
 }
 
+@keyframes bar-grow {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+}
+
 @keyframes pulse {
     0%, 100% { opacity: 0.4; }
     50% { opacity: 1; }
@@ -400,8 +544,42 @@ h1 {
     @view-transition { navigation: none; }
 }
 
-/* Small screens */
+/* Tablets and phones: the sidebar becomes a top bar */
+
+@media (max-width: 800px) {
+    .layout {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .sidebar {
+        position: static;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .series-nav {
+        order: 3;
+        width: 100%;
+        flex-direction: row;
+        overflow-x: auto;
+    }
+
+    .series-nav a { flex: none; }
+
+    .series-nav a.active::before {
+        top: auto;
+        right: 12px;
+        bottom: 0;
+        left: 12px;
+        width: auto;
+        height: 2px;
+    }
+}
 
 @media (max-width: 600px) {
-    .result-table .team-cell { display: none; }
+    .team-cell { display: none; }
 }
