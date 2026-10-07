@@ -40,12 +40,16 @@ function render() {
         }
     }
 
-    document.getElementById("btn-yours").classList.toggle("active", mode === "yours");
-    document.getElementById("btn-track").classList.toggle("active", mode === "track");
-
-    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    document.getElementById("btn-yours").title = document.body.dataset.tzYours + " (" + zone + ")";
-    document.getElementById("btn-track").title = document.body.dataset.tzTrack;
+    const btnYours = document.getElementById("btn-yours");
+    const btnTrack = document.getElementById("btn-track");
+    if (btnYours && btnTrack) {
+        btnYours.classList.toggle("active", mode === "yours");
+        btnTrack.classList.toggle("active", mode === "track");
+        const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        btnYours.title = document.body.dataset.tzYours + " (" + zone + ")";
+        btnTrack.title = document.body.dataset.tzTrack;
+    }
+}
 
 function updateCountdown() {
     const box = document.querySelector(".countdown[data-target]");
@@ -70,6 +74,9 @@ function updateCountdown() {
 function setupDetails(details, onOpen) {
     const summary = details.querySelector("summary");
     const content = details.querySelector(".content");
+    if (!summary || !content) {
+        return;
+    }
 
     summary.addEventListener("click", function (event) {
         if (!details.open && onOpen) {
@@ -147,15 +154,19 @@ async function loadResults(details) {
     }
 }
 
-document.getElementById("btn-yours").addEventListener("click", function () {
-    mode = "yours";
-    render();
-});
+const yoursButton = document.getElementById("btn-yours");
+const trackButton = document.getElementById("btn-track");
 
-document.getElementById("btn-track").addEventListener("click", function () {
-    mode = "track";
-    render();
-});
+if (yoursButton && trackButton) {
+    yoursButton.addEventListener("click", function () {
+        mode = "yours";
+        render();
+    });
+    trackButton.addEventListener("click", function () {
+        mode = "track";
+        render();
+    });
+}
 
 render();
 updateCountdown();
@@ -170,4 +181,4 @@ for (const details of document.querySelectorAll("details.race:not(.static)")) {
 
 for (const group of document.querySelectorAll("details.completed-group")) {
     setupDetails(group, null);
-}}
+}
