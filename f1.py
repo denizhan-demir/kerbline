@@ -233,13 +233,12 @@ def get_standings(season):
         teams.append({
             "position": row.get("positionText", row.get("position", "")),
             "name": team["name"],
-            "flag": flag_for_nationality(team.get("nationality", "")),
             "color": team_color(team["constructorId"]),
             "points": row.get("points", "0"),
             "wins": row.get("wins", "0"),
         })
 
-        return {
+    return {
         "drivers": add_percentages(drivers),
         "groups": [
             {"title": "teams", "column": "team", "rows": add_percentages(teams)},
