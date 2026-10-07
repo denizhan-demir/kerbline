@@ -49,6 +49,8 @@ TRANSLATIONS = {
         "team": "Team",
         "time": "Time / Status",
         "points": "Pts",
+        "manufacturer": "Manufacturer",
+        "manufacturers": "Manufacturers",
     },
     "tr": {
         "site_name": "Kerbline",
@@ -99,6 +101,8 @@ TRANSLATIONS = {
         "Qualifying 1": "Sıralama 1",
         "Qualifying 2": "Sıralama 2",
         "Warm Up": "Isınma",
+        "manufacturer": "Marka",
+        "manufacturers": "Markalar",
     },
 }
 

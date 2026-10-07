@@ -8,8 +8,11 @@ SHORT = "MGP"
 FIRST_SEASON = 2020
 PARTICIPANT = "rider"
 PARTICIPANTS = "riders"
+TEAM = "manufacturer"
+TEAMS = "manufacturers"
 
 BASE_URL = "https://api.motogp.pulselive.com/motogp/v1"
+WORLD_STANDINGS_URL = "https://api.pulselive.motogp.com/motogp/v2/results/world-standings"
 
 TEAM_COLORS = {
     "ducati": "#E2231A",
@@ -254,9 +257,10 @@ def get_standings(season):
         return {"drivers": [], "teams": []}
 
     category_uuid = category_id(season_uuid)
-    url = f"{BASE_URL}/results/standings?seasonUuid={season_uuid}&categoryUuid={category_uuid}"
-    data = get_cached(url, max_age_for(season))
+    max_age = max_age_for(season)
 
+    url = f"{BASE_URL}/results/standings?seasonUuid={season_uuid}&categoryUuid={category_uuid}"
+    data = get_cached(url, max_age)
     riders = []
     for row in data.get("classification", []):
         rider = make_rider(row)
@@ -265,4 +269,21 @@ def get_standings(season):
         rider["wins"] = row.get("race_wins", 0)
         riders.append(rider)
 
-    return {"drivers": add_percentages(riders), "teams": []}
+    manufacturers = []
+    try:
+        url = f"{WORLD_STANDINGS_URL}?type=constructor&season={season_uuid}&category={category_uuid}"
+        data = get_cached(url, max_age)
+        rows = (data.get("classification") or {}).get("constructor") or []
+        for row in rows:
+            name = row.get("constructor", {}).get("name", "")
+            manufacturers.append({
+                "position": row.get("position", ""),
+                "name": name,
+                "color": team_color(name),
+                "points": row.get("points", 0),
+                "wins": None,
+            })
+    except Exception:
+        manufacturers = []
+
+    return {"drivers": add_percentages(riders), "teams": add_percentages(manufacturers)}

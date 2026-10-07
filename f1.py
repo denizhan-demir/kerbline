@@ -17,7 +17,8 @@ SHORT = "F1"
 FIRST_SEASON = 2020
 PARTICIPANT = "driver"
 PARTICIPANTS = "drivers"
-
+TEAM = "team"
+TEAMS = "teams"
 BASE_URL = "https://api.jolpi.ca/ergast/f1"
 
 SESSIONS = [
