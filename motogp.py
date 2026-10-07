@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from core import add_percentages, get_cached, make_session, to_flag
 
@@ -100,16 +100,39 @@ def grand_prix_events(season):
 
 # ---------- Calendar ----------
 
+def race_session_time(season, event):
+    season_uuid = season_id(season)
+    category_uuid = category_id(season_uuid)
+    url = f"{BASE_URL}/results/sessions?eventUuid={event['id']}&categoryUuid={category_uuid}"
+    for session in get_cached(url, max_age_for(season)):
+        if session.get("type") == "RAC" and session.get("date"):
+            return session["date"]
+    return None
+
 def get_races(season):
+    today = datetime.now(timezone.utc).date().isoformat()
+    next_found = False
     races = []
     for number, event in enumerate(grand_prix_events(season), start=1):
         country = event["country"]
+        main = make_session("Race", event["date_end"])
+
+        if not next_found and event["date_end"] >= today:
+            try:
+                race_date = race_session_time(season, event)
+            except Exception:
+                race_date = None
+            if race_date:
+                main = make_session("Race", race_date[:10], race_date[11:])
+            if main["when"] > datetime.now(timezone.utc):
+                next_found = True
+
         races.append({
             "round": str(number),
             "name": pretty_name(event["name"]),
             "country": country["name"],
             "flag": to_flag(country["iso"]),
-            "main": make_session("Race", event["date_end"]),
+            "main": main,
             "tz": COUNTRY_TIMEZONES.get(country["iso"], ""),
             "sessions": [],
             "lazy": True,
