@@ -17,8 +17,6 @@ SHORT = "F1"
 FIRST_SEASON = 2020
 PARTICIPANT = "driver"
 PARTICIPANTS = "drivers"
-TEAM = "team"
-TEAMS = "teams"
 BASE_URL = "https://api.jolpi.ca/ergast/f1"
 
 SESSIONS = [
@@ -241,4 +239,9 @@ def get_standings(season):
             "wins": row.get("wins", "0"),
         })
 
-    return {"drivers": add_percentages(drivers), "teams": add_percentages(teams)}
+        return {
+        "drivers": add_percentages(drivers),
+        "groups": [
+            {"title": "teams", "column": "team", "rows": add_percentages(teams)},
+        ],
+    }

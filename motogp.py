@@ -8,8 +8,6 @@ SHORT = "MGP"
 FIRST_SEASON = 2020
 PARTICIPANT = "rider"
 PARTICIPANTS = "riders"
-TEAM = "manufacturer"
-TEAMS = "manufacturers"
 
 BASE_URL = "https://api.motogp.pulselive.com/motogp/v1"
 WORLD_STANDINGS_URL = "https://api.pulselive.motogp.com/motogp/v2/results/world-standings"
@@ -251,10 +249,27 @@ def get_race_results(season, round_number):
 
 # ---------- Standings ----------
 
+def color_from_name(name):
+    lower = name.lower()
+    for brand, color in TEAM_COLORS.items():
+        if brand in lower:
+            return color
+    return "#9a9aa8"
+
+
+def world_standings(kind, season_uuid, category_uuid, max_age):
+    url = f"{WORLD_STANDINGS_URL}?type={kind}&season={season_uuid}&category={category_uuid}"
+    try:
+        data = get_cached(url, max_age)
+    except Exception:
+        return []
+    return (data.get("classification") or {}).get(kind) or []
+
+
 def get_standings(season):
     season_uuid = season_id(season)
     if season_uuid is None:
-        return {"drivers": [], "teams": []}
+        return {"drivers": [], "groups": []}
 
     category_uuid = category_id(season_uuid)
     max_age = max_age_for(season)
@@ -270,20 +285,33 @@ def get_standings(season):
         riders.append(rider)
 
     manufacturers = []
-    try:
-        url = f"{WORLD_STANDINGS_URL}?type=constructor&season={season_uuid}&category={category_uuid}"
-        data = get_cached(url, max_age)
-        rows = (data.get("classification") or {}).get("constructor") or []
-        for row in rows:
-            name = row.get("constructor", {}).get("name", "")
-            manufacturers.append({
-                "position": row.get("position", ""),
-                "name": name,
-                "color": team_color(name),
-                "points": row.get("points", 0),
-                "wins": None,
-            })
-    except Exception:
-        manufacturers = []
+    for row in world_standings("constructor", season_uuid, category_uuid, max_age):
+        name = (row.get("constructor") or {}).get("name", "")
+        manufacturers.append({
+            "position": row.get("position", ""),
+            "name": name,
+            "color": team_color(name),
+            "points": row.get("points", 0),
+            "wins": None,
+        })
 
-    return {"drivers": add_percentages(riders), "teams": add_percentages(manufacturers)}
+    teams = []
+    for row in world_standings("team", season_uuid, category_uuid, max_age):
+        team = row.get("team")
+        name = team.get("name", "") if isinstance(team, dict) else (team or "")
+        constructor = (row.get("constructor") or {}).get("name", "")
+        teams.append({
+            "position": row.get("position", ""),
+            "name": name,
+            "color": team_color(constructor) if constructor else color_from_name(name),
+            "points": row.get("points", 0),
+            "wins": None,
+        })
+
+    return {
+        "drivers": add_percentages(riders),
+        "groups": [
+            {"title": "manufacturers", "column": "manufacturer", "rows": add_percentages(manufacturers)},
+            {"title": "teams", "column": "team", "rows": add_percentages(teams)},
+        ],
+    }
