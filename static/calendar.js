@@ -170,4 +170,4 @@ for (const details of document.querySelectorAll("details.race:not(.static)")) {
 
 for (const group of document.querySelectorAll("details.completed-group")) {
     setupDetails(group, null);
-}
+}}
