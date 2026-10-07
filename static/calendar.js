@@ -43,13 +43,9 @@ function render() {
     document.getElementById("btn-yours").classList.toggle("active", mode === "yours");
     document.getElementById("btn-track").classList.toggle("active", mode === "track");
 
-    const note = document.getElementById("tz-note");
-    if (mode === "yours") {
-        note.textContent = document.body.dataset.tzYours + " (" + Intl.DateTimeFormat().resolvedOptions().timeZone + ")";
-    } else {
-        note.textContent = document.body.dataset.tzTrack;
-    }
-}
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    document.getElementById("btn-yours").title = document.body.dataset.tzYours + " (" + zone + ")";
+    document.getElementById("btn-track").title = document.body.dataset.tzTrack;
 
 function updateCountdown() {
     const box = document.querySelector(".countdown[data-target]");
@@ -170,4 +166,8 @@ for (const details of document.querySelectorAll("details.race:not(.static)")) {
     if (details.open) {
         loadResults(details);
     }
+}
+
+for (const group of document.querySelectorAll("details.completed-group")) {
+    setupDetails(group, null);
 }

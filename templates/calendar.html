@@ -1,11 +1,58 @@
 {% extends "base.html" %}
 
-{% block content %}
+{% block toolbar %}
 <div class="toggle">
     <button id="btn-yours" class="active">{{ t.your_time }}</button>
     <button id="btn-track">{{ t.track_time }}</button>
 </div>
-<p class="note" id="tz-note"></p>
+{% endblock %}
+
+{% block content %}
+{% macro race_card(race, index) %}
+{% set expandable = race.lazy or not race.main.tbc %}
+<details id="round-{{ race.round }}" class="race {{ race.status }}{% if not expandable %} static{% endif %}" style="--i: {{ index }}" {% if race.status == "next" %}open{% endif %}>
+    <summary>
+        <span class="round">{{ race.round }}</span>
+        <span class="name">{{ race.flag }} {{ race.name }} <small>{{ race.country }}</small></span>
+        {% if race.status == "next" %}<span class="badge">{{ t.next }}</span>{% endif %}
+        {% if race.main.tbc %}
+        <span class="date">{{ race.main.date }}</span>
+        {% else %}
+        <span class="date" data-utc="{{ race.main.utc }}" data-tz="{{ race.tz }}"></span>
+        {% endif %}
+        {% if expandable %}<span class="chevron" aria-hidden="true"></span>{% endif %}
+    </summary>
+    {% if expandable %}
+    <div class="content">
+        {% if race.sessions %}
+        <ul class="sessions">
+            {% for session in race.sessions %}
+            {% if session.tbc %}
+            <li style="--j: {{ loop.index0 }}">
+                <span>{{ t.get(session.name, session.name) }}</span>
+                <span>{{ session.date }} · {{ t.tbc }}</span>
+            </li>
+            {% else %}
+            <li data-utc="{{ session.utc }}" data-tz="{{ race.tz }}" style="--j: {{ loop.index0 }}">
+                <span class="day"></span>
+                <span>{{ t.get(session.name, session.name) }}</span>
+                <span class="time"></span>
+            </li>
+            {% endif %}
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% if race.lazy or race.status != "upcoming" %}
+        <div class="results" data-url="/results/{{ series.ID }}/{{ season }}/{{ race.round }}?lang={{ lang }}">
+            <div class="skeleton" role="status" aria-label="{{ t.loading }}">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</details>
+{% endmacro %}
 
 <section class="page-content">
     {% set next_race = races | selectattr("status", "equalto", "next") | first %}
@@ -36,50 +83,26 @@
     <p>{{ t.not_available.format(season=season) }}</p>
     {% endif %}
 
-    {% for race in races %}
-    {% set expandable = race.lazy or not race.main.tbc %}
-    <details id="round-{{ race.round }}" class="race {{ race.status }}{% if not expandable %} static{% endif %}" style="--i: {{ loop.index0 }}" {% if race.status == "next" %}open{% endif %}>
+    {% set completed = races | selectattr("status", "equalto", "done") | list %}
+    {% set remaining = races | rejectattr("status", "equalto", "done") | list %}
+
+    {% if completed %}
+    <details class="completed-group">
         <summary>
-            <span class="round">{{ race.round }}</span>
-            <span class="name">{{ race.flag }} {{ race.name }} <small>{{ race.country }}</small></span>
-            {% if race.status == "next" %}<span class="badge">{{ t.next }}</span>{% endif %}
-            {% if race.main.tbc %}
-            <span class="date">{{ race.main.date }}</span>
-            {% else %}
-            <span class="date" data-utc="{{ race.main.utc }}" data-tz="{{ race.tz }}"></span>
-            {% endif %}
-            {% if expandable %}<span class="chevron" aria-hidden="true"></span>{% endif %}
+            <span>{{ t.completed }}</span>
+            <span class="count">{{ completed | length }}</span>
+            <span class="chevron" aria-hidden="true"></span>
         </summary>
-        {% if expandable %}
         <div class="content">
-            {% if race.sessions %}
-            <ul class="sessions">
-                {% for session in race.sessions %}
-                {% if session.tbc %}
-                <li style="--j: {{ loop.index0 }}">
-                    <span>{{ t.get(session.name, session.name) }}</span>
-                    <span>{{ session.date }} · {{ t.tbc }}</span>
-                </li>
-                {% else %}
-                <li data-utc="{{ session.utc }}" data-tz="{{ race.tz }}" style="--j: {{ loop.index0 }}">
-                    <span class="day"></span>
-                    <span>{{ t.get(session.name, session.name) }}</span>
-                    <span class="time"></span>
-                </li>
-                {% endif %}
-                {% endfor %}
-            </ul>
-            {% endif %}
-            {% if race.lazy or race.status != "upcoming" %}
-            <div class="results" data-url="/results/{{ series.ID }}/{{ season }}/{{ race.round }}?lang={{ lang }}">
-                <div class="skeleton" role="status" aria-label="{{ t.loading }}">
-                    <span></span><span></span><span></span>
-                </div>
-            </div>
-            {% endif %}
+            {% for race in completed %}
+            {{ race_card(race, loop.index0) }}
+            {% endfor %}
         </div>
-        {% endif %}
     </details>
+    {% endif %}
+
+    {% for race in remaining %}
+    {{ race_card(race, loop.index0) }}
     {% endfor %}
 </section>
 {% endblock %}

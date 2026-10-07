@@ -51,6 +51,8 @@ TRANSLATIONS = {
         "points": "Pts",
         "manufacturer": "Manufacturer",
         "manufacturers": "Manufacturers",
+        "season": "Season",
+        "completed": "Completed races",
     },
     "tr": {
         "site_name": "Kerbline",
@@ -103,6 +105,8 @@ TRANSLATIONS = {
         "Warm Up": "Isınma",
         "manufacturer": "Marka",
         "manufacturers": "Markalar",
+        "season": "Sezon",
+        "completed": "Tamamlanan yarışlar",
     },
 }
 

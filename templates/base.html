@@ -2,7 +2,7 @@
 <html lang="{{ lang }}">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#0e0f14">
     <title>{{ series.NAME }} {{ season }} · {{ t.site_name }}</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏁</text></svg>">
@@ -42,17 +42,34 @@
                 <a href="{{ url_for('standings', series_id=series.ID, season=season) }}" class="{% if page == 'standings' %}active{% endif %}">{{ t.standings }}</a>
             </nav>
 
-            <nav class="seasons">
-                {% for s in seasons %}
-                <a href="{{ url_for(page, series_id=series.ID, season=s) }}" class="{% if s == season %}active{% endif %}">{{ s }}</a>
-                {% endfor %}
-            </nav>
+            <div class="toolbar">
+                <label class="season-select">
+                    <span class="visually-hidden">{{ t.season }}</span>
+                    <select onchange="location.href = this.value">
+                        {% for s in seasons | reverse %}
+                        <option value="{{ url_for(page, series_id=series.ID, season=s) }}" {% if s == season %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                {% block toolbar %}{% endblock %}
+            </div>
 
             {% block content %}{% endblock %}
 
             <footer class="footer">{{ t.disclaimer }}</footer>
         </div>
     </div>
+
+    <nav class="bottom-nav">
+        <a href="{{ url_for('calendar', series_id=series.ID, season=season) }}" class="{% if page == 'calendar' %}active{% endif %}">
+            <span class="bottom-icon" aria-hidden="true">📅</span>
+            <span>{{ t.calendar }}</span>
+        </a>
+        <a href="{{ url_for('standings', series_id=series.ID, season=season) }}" class="{% if page == 'standings' %}active{% endif %}">
+            <span class="bottom-icon" aria-hidden="true">🏆</span>
+            <span>{{ t.standings }}</span>
+        </a>
+    </nav>
 
     {% block scripts %}{% endblock %}
 </body>

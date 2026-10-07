@@ -845,3 +845,133 @@ td.pos {
     .team-cell { display: none; }
     .name small { display: none; }
 }
+
+/* ---------- Toolbar: season picker + time zone ---------- */
+
+:root { color-scheme: dark; }
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    view-transition-name: toolbar;
+}
+
+.toolbar .toggle { margin: 0; }
+
+.season-select select {
+    -webkit-appearance: none;
+    appearance: none;
+    padding: 8px 34px 8px 16px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238a8ca3' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 14px center / 10px;
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: border-color 0.25s;
+}
+
+.season-select select:hover { border-color: var(--line-strong); }
+
+/* ---------- Completed races group ---------- */
+
+.completed-group { margin-bottom: 8px; }
+
+.completed-group > summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius);
+    color: var(--muted);
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+    transition: color 0.25s, border-color 0.25s;
+}
+
+.completed-group > summary::-webkit-details-marker { display: none; }
+
+.completed-group > summary:hover {
+    color: var(--text);
+    border-color: var(--muted);
+}
+
+.completed-group .count {
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--card);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.completed-group > summary .chevron { margin-left: auto; }
+.completed-group[open] > summary .chevron { transform: rotate(45deg); }
+.completed-group.closing > summary .chevron { transform: rotate(-45deg); }
+.completed-group > .content { padding-top: 8px; }
+
+/* ---------- Bottom navigation (phones and tablets) ---------- */
+
+.bottom-nav { display: none; }
+
+@media (max-width: 800px) {
+    body { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+
+    .tabs { display: none; }
+
+    .bottom-nav {
+        position: fixed;
+        right: 12px;
+        bottom: calc(12px + env(safe-area-inset-bottom));
+        left: 12px;
+        z-index: 10;
+        display: flex;
+        gap: 4px;
+        padding: 6px;
+        border: 1px solid var(--line-strong);
+        border-radius: 18px;
+        background: color-mix(in srgb, var(--surface) 80%, transparent);
+        -webkit-backdrop-filter: blur(16px);
+        backdrop-filter: blur(16px);
+        box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.6);
+        view-transition-name: bottom-nav;
+    }
+
+    .bottom-nav a {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        padding: 8px 4px;
+        border-radius: 12px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        text-decoration: none;
+        transition: background 0.25s, color 0.25s;
+    }
+
+    .bottom-nav a.active {
+        background: var(--card);
+        color: var(--text);
+    }
+
+    .bottom-icon { font-size: 18px; line-height: 1; }
+}
