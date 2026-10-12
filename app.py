@@ -222,6 +222,9 @@ def about():
 def favicon():
     return "", 204
 
+@app.route("/health")
+def health():
+    return {"status": "ok"}
 
 if __name__ == "__main__":
     app.run(debug=True, port=8000)
