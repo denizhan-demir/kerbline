@@ -62,3 +62,12 @@
                         <div class="points-bar"></div>
                     </td>
                     {% if show_wins %}<td class="pts">{{ row.wins }}</td>{% endif %}
+                    <td class="pts strong">{{ row.points }}</td>
+</tr>
+                {% endfor %}
+</tbody>
+</table>
+</div>
+    {% endfor %}
+</section>
+{% endblock %}

@@ -82,3 +82,47 @@
     </div>
 </details>
 {% endif %}
+
+{% for podium in r.podiums %}
+<p class="label">{% if podium.trophy %}🏆 {% endif %}{{ t.get(podium.label, podium.label) }}</p>
+<div class="podium">
+    {% for driver in podium.rows %}
+    <div class="step p{{ loop.index }}" style="--team: {{ driver.color }}">
+        <span class="code">{{ driver.flag }} {{ driver.code }}</span>
+        <div class="bar">P{{ loop.index }}</div>
+    </div>
+    {% endfor %}
+</div>
+{% endfor %}
+
+{% for table in r.tables %}
+<details class="full-results">
+    <summary>{{ t.full_result }} · {{ t.get(table.label, table.label) }}</summary>
+    <div class="content">
+        <div class="table-wrap">
+            <table class="result-table">
+                <thead>
+                    <tr>
+                        <th>{{ t.pos }}</th>
+                        <th>{{ t.driver }}</th>
+                        <th class="team-cell">{{ t.team }}</th>
+                        <th>{{ t.time }}</th>
+                        <th class="pts">{{ t.points }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in table.rows %}
+                    <tr style="--team: {{ row.color }}; --k: {{ loop.index0 }}">
+                        <td class="pos">{{ row.position }}</td>
+                        <td>{{ row.flag }} {{ row.name }}</td>
+                        <td class="team-cell">{{ row.team }}</td>
+                        <td class="time-cell">{{ row.time }}</td>
+                        <td class="pts">{{ row.points }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</details>
+{% endfor %}
