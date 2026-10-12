@@ -4,11 +4,12 @@ from flask import Flask, abort, make_response, redirect, render_template, reques
 
 import f1
 import motogp
+import wsbk
 from core import add_statuses
 
 app = Flask(__name__)
 
-SERIES = {f1.ID: f1, motogp.ID: motogp}
+SERIES = {f1.ID: f1, motogp.ID: motogp, wsbk.ID: wsbk}
 DEFAULT_SERIES = f1.ID
 
 TRANSLATIONS = {
@@ -28,7 +29,7 @@ TRANSLATIONS = {
         "seconds": "sec",
         "rider": "Rider",
         "riders": "Riders",
-        "disclaimer": "Unofficial fan project, not affiliated with Formula 1, MotoGP or their rights holders. F1 data: Jolpica-F1. MotoGP data: motogp.com.",
+        "disclaimer": "Unofficial fan project, not affiliated with Formula 1, MotoGP, WorldSBK or their rights holders. F1 data: Jolpica-F1. MotoGP data: motogp.com. WorldSBK data: worldsbk.com.",
         "your_time": "Your time",
         "track_time": "Track time",
         "tz_yours": "Times in your time zone",
@@ -70,7 +71,7 @@ TRANSLATIONS = {
         "seconds": "sn",
         "rider": "Pilot",
         "riders": "Pilotlar",
-        "disclaimer": "Resmi olmayan bir hobi projesidir; Formula 1, MotoGP ya da hak sahipleriyle bir bağlantısı yoktur. F1 verileri: Jolpica-F1. MotoGP verileri: motogp.com.",
+        "disclaimer": "Resmi olmayan bir hayran projesidir; Formula 1, MotoGP, WorldSBK veya hak sahipleriyle bağlantısı yoktur. F1 verisi: Jolpica-F1. MotoGP verisi: motogp.com. WorldSBK verisi: worldsbk.com.",
         "your_time": "Senin saatin",
         "track_time": "Pist saati",
         "tz_yours": "Saatler senin saat dilimine göre",
@@ -103,6 +104,10 @@ TRANSLATIONS = {
         "Qualifying 1": "Sıralama 1",
         "Qualifying 2": "Sıralama 2",
         "Warm Up": "Isınma",
+        "Free Practice 3": "3. Serbest Antrenman",
+        "Race 1": "1. Yarış",
+        "Race 2": "2. Yarış",
+        "Superpole Race": "Superpole Yarışı",
         "manufacturer": "Marka",
         "manufacturers": "Markalar",
         "season": "Sezon",

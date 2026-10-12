@@ -9,6 +9,7 @@
     {% endif %}
 
     {% if standings.drivers %}
+    {% set driver_wins = standings.drivers[0].wins is not none %}
     <h2 class="section-title">{{ t[series.PARTICIPANTS] }}</h2>
     <div class="table-wrap">
         <table class="standings-table">
@@ -17,7 +18,7 @@
                     <th>{{ t.pos }}</th>
                     <th>{{ t[series.PARTICIPANT] }}</th>
                     <th class="team-cell">{{ t.team }}</th>
-                    <th class="pts">{{ t.wins }}</th>
+                    {% if driver_wins %}<th class="pts">{{ t.wins }}</th>{% endif %}
                     <th class="pts">{{ t.points }}</th>
                 </tr>
             </thead>
@@ -30,7 +31,7 @@
                         <div class="points-bar"></div>
                     </td>
                     <td class="team-cell">{{ row.team }}</td>
-                    <td class="pts">{{ row.wins }}</td>
+                    {% if driver_wins %}<td class="pts">{{ row.wins }}</td>{% endif %}
                     <td class="pts strong">{{ row.points }}</td>
                 </tr>
                 {% endfor %}
@@ -61,12 +62,3 @@
                         <div class="points-bar"></div>
                     </td>
                     {% if show_wins %}<td class="pts">{{ row.wins }}</td>{% endif %}
-                    <td class="pts strong">{{ row.points }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% endfor %}
-</section>
-{% endblock %}
