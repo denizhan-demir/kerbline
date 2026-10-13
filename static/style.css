@@ -52,7 +52,7 @@ a { color: inherit; }
     gap: 32px;
     max-width: 1200px;
     margin: 0 auto;
-    padding: 24px 20px 40px;
+    padding: calc(24px + env(safe-area-inset-top)) 20px 40px;
 }
 
 .main { min-width: 0; }
@@ -61,7 +61,7 @@ a { color: inherit; }
 
 .sidebar {
     position: sticky;
-    top: 24px;
+    top: calc(24px + env(safe-area-inset-top));
     align-self: start;
     display: flex;
     flex-direction: column;
@@ -152,6 +152,13 @@ a { color: inherit; }
 }
 
 .series-nav a.active .series-tag { background: var(--accent); color: white; }
+
+.series-tag svg {
+    display: block;
+    width: 12px;
+    height: 15px;
+    margin: 0 auto;
+}
 
 .langs { display: flex; gap: 4px; padding: 0 8px; }
 
@@ -801,7 +808,11 @@ td.pos {
     .layout {
         grid-template-columns: 1fr;
         gap: 16px;
-        padding: 16px 12px 32px;
+        padding:
+            calc(16px + env(safe-area-inset-top))
+            max(12px, env(safe-area-inset-right))
+            32px
+            max(12px, env(safe-area-inset-left));
     }
 
     .sidebar {
@@ -838,6 +849,9 @@ td.pos {
     .sessions,
     .results { padding-left: 18px; }
 
+    /* The bottom bar already has a home button. */
+    .series-nav .home-link { display: none; }
+
     .countdown div { flex: 1; min-width: 0; }
 }
 
@@ -860,6 +874,8 @@ td.pos {
 }
 
 .toolbar {
+    position: relative;
+    z-index: 5;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -974,4 +990,207 @@ td.pos {
     }
 
     .bottom-icon { font-size: 18px; line-height: 1; }
+}
+/* ---------- Home: up next ---------- */
+
+.up-next {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 12px;
+}
+
+.next-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px 18px 20px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: var(--surface);
+    overflow: hidden;
+    animation: row-in 0.6s var(--ease-out) both;
+    animation-delay: calc(var(--i, 0) * 80ms);
+    transition: border-color 0.3s;
+}
+
+.next-card:hover { border-color: var(--line-strong); }
+
+.next-card.soon {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+    background:
+        radial-gradient(420px 200px at 100% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%),
+        var(--surface);
+}
+
+.next-card.soon::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 4px;
+    background: repeating-linear-gradient(90deg, var(--accent) 0 14px, var(--text) 14px 28px);
+    opacity: 0.85;
+}
+
+.next-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.next-head .badge { margin-left: auto; }
+.next-card.soon .next-head .series-tag { background: var(--accent); color: white; }
+
+.next-race {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-decoration: none;
+}
+
+.next-round {
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.next-name {
+    font-size: 21px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-underline-offset: 4px;
+    transition: text-decoration-color 0.25s;
+}
+
+.next-race:hover .next-name { text-decoration-color: var(--accent); }
+.next-place { color: var(--muted); font-size: 14px; }
+.next-date { font-weight: 600; }
+
+.next-card .countdown { gap: 6px; margin-top: 0; }
+
+.next-card .countdown div {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 4px;
+    border-radius: 10px;
+}
+
+.next-card .countdown span { font-size: 20px; }
+.next-card .countdown small { font-size: 10px; letter-spacing: 0.06em; }
+
+.next-card .sessions {
+    max-width: none;
+    padding: 2px 0 0;
+    border-top: 1px solid var(--line);
+    font-size: 14px;
+}
+
+.next-card .sessions .day { margin-top: 10px; }
+.sessions li.past { opacity: 0.4; }
+
+.next-more {
+    align-self: flex-start;
+    margin-top: auto;
+    padding-top: 4px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: color 0.25s;
+}
+
+.next-more:hover { color: var(--text); }
+
+/* ---------- Add to calendar menu ---------- */
+
+.subscribe {
+    position: relative;
+    margin-left: auto;
+}
+
+.subscribe > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+    transition: background 0.25s, border-color 0.25s;
+}
+
+.subscribe > summary::-webkit-details-marker { display: none; }
+
+.subscribe > summary:hover,
+.subscribe[open] > summary {
+    border-color: var(--line-strong);
+    background: var(--card);
+}
+
+.subscribe > summary svg {
+    width: 16px;
+    height: 16px;
+    color: var(--accent);
+}
+
+.subscribe-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 270px;
+    max-width: calc(100vw - 24px);
+    padding: 6px;
+    border: 1px solid var(--line-strong);
+    border-radius: 14px;
+    background: var(--card);
+    box-shadow: 0 18px 40px -16px rgba(0, 0, 0, 0.75);
+    transform-origin: top right;
+    animation: menu-in 0.22s var(--ease-out) both;
+}
+
+.subscribe-menu a,
+.subscribe-menu button {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.subscribe-menu a:hover,
+.subscribe-menu button:hover { background: var(--line); }
+
+.subscribe-menu .note { margin: 6px 12px 6px; line-height: 1.45; }
+
+@keyframes menu-in {
+    from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+    to { opacity: 1; transform: none; }
 }

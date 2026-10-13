@@ -1,20 +1,50 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+from urllib.parse import quote
 
 from flask import Flask, abort, make_response, redirect, render_template, request, url_for
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 import f1
+import ics
 import motogp
 import wsbk
 from core import add_statuses
 
 app = Flask(__name__)
+# Render sits in front of the app; this makes links use https:// on the live site.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 SERIES = {f1.ID: f1, motogp.ID: motogp, wsbk.ID: wsbk}
 DEFAULT_SERIES = f1.ID
 
+# How far ahead the calendar feed loads every session of MotoGP and WorldSBK rounds.
+FEED_DETAIL_WINDOW = timedelta(days=45)
+FEED_DETAIL_ROUNDS = 3
+
+MANIFEST = {
+    "name": "Kerbline",
+    "short_name": "Kerbline",
+    "description": "F1, MotoGP and WorldSBK calendars, results and standings",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#0e0f14",
+    "theme_color": "#0e0f14",
+    "icons": [
+        {"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
+        {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
+        {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+    ],
+}
+
 TRANSLATIONS = {
     "en": {
         "site_name": "Kerbline",
+        "home": "Home",
+        "up_next": "Up next",
+        "this_weekend": "This weekend",
+        "no_next": "The next season's calendar isn't out yet.",
+        "open_calendar": "Full calendar",
         "calendar": "Calendar",
         "standings": "Standings",
         "drivers": "Drivers",
@@ -34,6 +64,12 @@ TRANSLATIONS = {
         "track_time": "Track time",
         "tz_yours": "Times in your time zone",
         "tz_track": "Times in each circuit's local time",
+        "add_to_calendar": "Add to calendar",
+        "apple_calendar": "Apple Calendar (iPhone, Mac)",
+        "google_calendar": "Google Calendar",
+        "copy_link": "Copy calendar link",
+        "copied": "Link copied!",
+        "calendar_help": "Every session goes into your calendar and updates by itself when times change.",
         "not_available": "The {season} calendar isn't available yet.",
         "no_standings": "Standings for {season} aren't available yet.",
         "unavailable": "Data is unavailable right now. Please try again later.",
@@ -57,6 +93,11 @@ TRANSLATIONS = {
     },
     "tr": {
         "site_name": "Kerbline",
+        "home": "Ana sayfa",
+        "up_next": "Sıradaki yarışlar",
+        "this_weekend": "Bu hafta sonu",
+        "no_next": "Gelecek sezonun takvimi henüz açıklanmadı.",
+        "open_calendar": "Tüm takvim",
         "calendar": "Takvim",
         "standings": "Puan Durumu",
         "drivers": "Pilotlar",
@@ -76,6 +117,12 @@ TRANSLATIONS = {
         "track_time": "Pist saati",
         "tz_yours": "Saatler senin saat dilimine göre",
         "tz_track": "Saatler her pistin yerel saatine göre",
+        "add_to_calendar": "Takvime ekle",
+        "apple_calendar": "Apple Takvim (iPhone, Mac)",
+        "google_calendar": "Google Takvim",
+        "copy_link": "Takvim linkini kopyala",
+        "copied": "Link kopyalandı!",
+        "calendar_help": "Bütün seanslar takvimine eklenir, saatler değişirse kendiliğinden güncellenir.",
         "not_available": "{season} takvimi henüz mevcut değil.",
         "no_standings": "{season} puan durumu henüz mevcut değil.",
         "unavailable": "Verilere şu anda ulaşılamıyor. Lütfen daha sonra tekrar dene.",
@@ -148,6 +195,8 @@ def render_page(template, lang, **context):
         lang=lang,
         t=TRANSLATIONS[lang],
         series_list=list(SERIES.values()),
+        default_series=SERIES[DEFAULT_SERIES],
+        this_year=datetime.now().year,
         **context,
     )
     response = make_response(html)
@@ -155,9 +204,65 @@ def render_page(template, lang, **context):
     return response
 
 
+def race_sessions(series, season, race):
+    # F1 sends every session with the calendar; MotoGP and WorldSBK need one extra request per race.
+    if race["sessions"] or not race.get("lazy"):
+        return race["sessions"]
+    try:
+        return series.get_race_results(season, int(race["round"]))["sessions"]
+    except Exception:
+        app.logger.exception("Could not load sessions")
+        return []
+
+
+def feed_links(series_id, lang):
+    url = url_for("calendar_feed", series_id=series_id, lang=lang, _external=True)
+    webcal = "webcal://" + url.split("://", 1)[1]
+    google = "https://calendar.google.com/calendar/render?cid=" + quote(webcal, safe="")
+    return {"url": url, "webcal": webcal, "google": google}
+
+
+# ---------- Home page ----------
+
+def next_race_for(series, now):
+    item = {"series": series, "race": None, "season": now.year, "sessions": [],
+            "this_weekend": False, "ok": True}
+    try:
+        for season in (now.year, now.year + 1):
+            upcoming = []
+            for race in series.get_races(season):
+                if race["main"]["when"] > now:
+                    upcoming.append(race)
+            if upcoming:
+                item["race"] = upcoming[0]
+                item["season"] = season
+                break
+    except Exception:
+        app.logger.exception("Could not load next race")
+        item["ok"] = False
+        return item
+
+    race = item["race"]
+    if race is None:
+        return item
+    for session in race_sessions(series, item["season"], race):
+        if not session["tbc"]:
+            item["sessions"].append({**session, "past": session["when"] < now})
+    if not race["main"]["tbc"]:
+        item["this_weekend"] = race["main"]["when"].isocalendar()[:2] == now.isocalendar()[:2]
+    return item
+
+
 @app.route("/")
 def index():
-    return redirect(url_for("series_home", series_id=DEFAULT_SERIES))
+    lang = get_lang()
+    now = datetime.now(timezone.utc)
+    upcoming = []
+    for series in SERIES.values():
+        upcoming.append(next_race_for(series, now))
+    # Soonest race first; series without a next race go last.
+    upcoming.sort(key=lambda item: item["race"]["main"]["when"] if item["race"] else datetime.max.replace(tzinfo=timezone.utc))
+    return render_page("home.html", lang, page="home", series=None, upcoming=upcoming)
 
 
 @app.route("/<series_id>")
@@ -179,6 +284,7 @@ def calendar(series_id, season):
     return render_page(
         "calendar.html", lang,
         page="calendar", series=series, season=season, seasons=seasons, races=races,
+        feed=feed_links(series.ID, lang),
     )
 
 
@@ -218,6 +324,50 @@ def race_results(series_id, season, round_number):
     return response
 
 
+# ---------- Calendar subscription (.ics) ----------
+
+@app.route("/<series_id>/calendar.ics")
+def calendar_feed(series_id):
+    t = TRANSLATIONS[get_lang()]
+    series = get_series(series_id)
+    now = datetime.now(timezone.utc)
+    events = []
+    for season in (now.year, now.year + 1):
+        try:
+            races = series.get_races(season)
+        except Exception:
+            app.logger.exception("Could not load calendar feed")
+            if season == now.year:
+                # Better to fail than to send an empty calendar that wipes people's events.
+                return t["unavailable"], 503
+            continue
+
+        detailed = 0
+        for race in races:
+            sessions = race["sessions"]
+            soon = now < race["main"]["when"] < now + FEED_DETAIL_WINDOW
+            if race.get("lazy") and soon and detailed < FEED_DETAIL_ROUNDS:
+                sessions = race_sessions(series, season, race)
+                detailed += 1
+            link = url_for("calendar", series_id=series.ID, season=season, _external=True) + f"#round-{race['round']}"
+            events.extend(ics.race_events(series, season, race, sessions, t, link))
+
+    body = ics.make_calendar(f"{series.NAME} · {t['site_name']}", events)
+    response = make_response(body)
+    response.headers["Content-Type"] = "text/calendar; charset=utf-8"
+    response.headers["Cache-Control"] = "public, max-age=1800"
+    return response
+
+
+# ---------- App install (home screen) ----------
+
+@app.route("/manifest.webmanifest")
+def manifest():
+    response = make_response(MANIFEST)
+    response.mimetype = "application/manifest+json"
+    return response
+
+
 @app.route("/about")
 def about():
     return "<h1>About</h1><p>Calendars, results and standings for motorsport series.</p>"
@@ -225,11 +375,13 @@ def about():
 
 @app.route("/favicon.ico")
 def favicon():
-    return "", 204
+    return redirect(url_for("static", filename="icons/icon-192.png"))
+
 
 @app.route("/health")
 def health():
     return {"status": "ok"}
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=8000)

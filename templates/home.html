@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}{{ t.site_name }} · {{ t.up_next }}{% endblock %}
+
+{% block header %}
+<header class="top">
+    <h1>{{ t.up_next }}</h1>
+</header>
+
+<div class="toolbar">
+    <div class="toggle">
+        <button id="btn-yours" class="active">{{ t.your_time }}</button>
+        <button id="btn-track">{{ t.track_time }}</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="page-content">
+    <div class="up-next">
+        {% for item in upcoming %}
+        {% set race = item.race %}
+        {% set link = url_for('calendar', series_id=item.series.ID, season=item.season) %}
+        <article class="next-card{% if item.this_weekend %} soon{% endif %}" style="--i: {{ loop.index0 }}">
+            <div class="next-head">
+                <span class="series-tag">{{ item.series.SHORT }}</span>
+                <span>{{ item.series.NAME }}</span>
+                {% if item.this_weekend %}<span class="badge">{{ t.this_weekend }}</span>{% endif %}
+            </div>
+
+            {% if race %}
+            <a class="next-race" href="{{ link }}#round-{{ race.round }}">
+                <span class="next-round">{{ t.round }} {{ race.round }}{% if item.season != this_year %} · {{ item.season }}{% endif %}</span>
+                <span class="next-name">{{ race.flag }} {{ race.name }}</span>
+                <span class="next-place">{{ race.country }}</span>
+            </a>
+
+            {% if race.main.tbc %}
+            <div class="next-date">{{ race.main.date }}</div>
+            {% else %}
+            <div class="next-date hero-date" data-utc="{{ race.main.utc }}" data-tz="{{ race.tz }}"></div>
+            <div class="countdown" data-target="{{ race.main.utc }}">
+                <div><span data-unit="days">–</span><small>{{ t.days }}</small></div>
+                <div><span data-unit="hours">–</span><small>{{ t.hours }}</small></div>
+                <div><span data-unit="minutes">–</span><small>{{ t.minutes }}</small></div>
+                <div><span data-unit="seconds">–</span><small>{{ t.seconds }}</small></div>
+            </div>
+            {% endif %}
+
+            {% if item.sessions %}
+            <ul class="sessions">
+                {% for session in item.sessions %}
+                <li class="{% if session.past %}past{% endif %}" data-utc="{{ session.utc }}" data-tz="{{ race.tz }}">
+                    <span class="day"></span>
+                    <span>{{ t.get(session.name, session.name) }}</span>
+                    <span class="time"></span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            {% elif item.ok %}
+            <p class="note">{{ t.no_next }}</p>
+            {% else %}
+            <p class="note">{{ t.unavailable }}</p>
+            {% endif %}
+
+            <a class="next-more" href="{{ link }}">{{ t.open_calendar }} →</a>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='calendar.js') }}"></script>
+{% endblock %}

@@ -1,4 +1,22 @@
-let mode = "yours";
+const MODE_KEY = "kerbline-time-mode";
+
+function loadMode() {
+    try {
+        return localStorage.getItem(MODE_KEY) === "track" ? "track" : "yours";
+    } catch (error) {
+        return "yours";
+    }
+}
+
+function saveMode(value) {
+    try {
+        localStorage.setItem(MODE_KEY, value);
+    } catch (error) {
+        // Private browsing can block storage; the choice then lasts until the page closes.
+    }
+}
+
+let mode = loadMode();
 const locale = document.body.dataset.locale;
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -51,11 +69,13 @@ function render() {
     }
 }
 
-function updateCountdown() {
-    const box = document.querySelector(".countdown[data-target]");
-    if (!box) {
-        return;
+function updateCountdowns() {
+    for (const box of document.querySelectorAll(".countdown[data-target]")) {
+        updateCountdown(box);
     }
+}
+
+function updateCountdown(box) {
     let remaining = Math.max(0, new Date(box.dataset.target) - new Date());
     const days = Math.floor(remaining / 86400000);
     remaining -= days * 86400000;
@@ -160,17 +180,54 @@ const trackButton = document.getElementById("btn-track");
 if (yoursButton && trackButton) {
     yoursButton.addEventListener("click", function () {
         mode = "yours";
+        saveMode(mode);
         render();
     });
     trackButton.addEventListener("click", function () {
         mode = "track";
+        saveMode(mode);
         render();
     });
 }
 
+// ---------- "Add to calendar" menu ----------
+
+for (const button of document.querySelectorAll(".copy-link")) {
+    button.addEventListener("click", async function () {
+        if (!button.dataset.label) {
+            button.dataset.label = button.textContent;
+        }
+        try {
+            await navigator.clipboard.writeText(button.dataset.url);
+            button.textContent = button.dataset.copied;
+            setTimeout(function () {
+                button.textContent = button.dataset.label;
+            }, 1800);
+        } catch (error) {
+            window.prompt("", button.dataset.url);
+        }
+    });
+}
+
+document.addEventListener("click", function (event) {
+    for (const menu of document.querySelectorAll("details.subscribe[open]")) {
+        if (!menu.contains(event.target)) {
+            menu.open = false;
+        }
+    }
+});
+
+document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+        for (const menu of document.querySelectorAll("details.subscribe[open]")) {
+            menu.open = false;
+        }
+    }
+});
+
 render();
-updateCountdown();
-setInterval(updateCountdown, 1000);
+updateCountdowns();
+setInterval(updateCountdowns, 1000);
 
 for (const details of document.querySelectorAll("details.race:not(.static)")) {
     setupDetails(details, loadResults);

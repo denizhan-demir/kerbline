@@ -5,6 +5,22 @@
     <button id="btn-yours" class="active">{{ t.your_time }}</button>
     <button id="btn-track">{{ t.track_time }}</button>
 </div>
+
+<details class="subscribe">
+    <summary>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3.5" y="5" width="17" height="15.5" rx="3" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M3.5 10h17M8 3v4M16 3v4M12 13v5M9.5 15.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        {{ t.add_to_calendar }}
+    </summary>
+    <div class="subscribe-menu">
+        <a href="{{ feed.webcal }}">{{ t.apple_calendar }}</a>
+        <a href="{{ feed.google }}" target="_blank" rel="noopener">{{ t.google_calendar }}</a>
+        <button type="button" class="copy-link" data-url="{{ feed.url }}" data-copied="{{ t.copied }}">{{ t.copy_link }}</button>
+        <p class="note">{{ t.calendar_help }}</p>
+    </div>
+</details>
 {% endblock %}
 
 {% block content %}
