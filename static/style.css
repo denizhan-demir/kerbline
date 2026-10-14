@@ -1548,6 +1548,19 @@ button.leader:active { transform: scale(0.98); }
 
 .driver-stats span { color: var(--muted); font-size: 12.5px; font-weight: 600; }
 
+.driver-facts {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px 18px;
+    margin: 0 0 20px;
+    font-size: 14.5px;
+    animation: rise 0.5s 0.1s var(--ease-out) both;
+}
+
+.driver-facts:empty { display: none; }
+.driver-facts dt { color: var(--muted); font-weight: 600; }
+.driver-facts dd { margin: 0; }
+
 .driver-bio p {
     margin: 0 0 12px;
     color: color-mix(in srgb, var(--text) 86%, var(--muted));

@@ -97,7 +97,8 @@
     {% block overlay %}{% endblock %}
 
     <dialog class="sheet driver-sheet" id="driver-sheet" aria-labelledby="driver-name"
-            data-read-more="{{ t.read_more }}" data-photo="{{ t.photo }}" data-no-info="{{ t.no_info }}">
+            data-read-more="{{ t.read_more }}" data-read-more-en="{{ t.read_more_en }}" data-photo="{{ t.photo }}"
+            data-no-info="{{ t.no_info }}" data-born="{{ t.born }}" data-birthplace="{{ t.birthplace }}" data-age="{{ t.age }}">
         <div class="sheet-panel">
             <div class="sheet-grab" aria-hidden="true"></div>
             <header class="sheet-head driver-head">
@@ -120,6 +121,7 @@
                     <div data-stat="points" style="--n: 1"><b></b><span>{{ t.points }}</span></div>
                     <div data-stat="wins" style="--n: 2"><b></b><span>{{ t.wins }}</span></div>
                 </div>
+                <dl class="driver-facts"></dl>
                 <div class="driver-bio"></div>
                 <p class="driver-credit"></p>
             </div>

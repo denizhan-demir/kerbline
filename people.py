@@ -42,7 +42,8 @@ def find_page(name, series_id):
         "generator": "search",
         "gsrsearch": f"{name} {SEARCH_WORDS.get(series_id, '')}",
         "gsrlimit": 3,
-        "prop": "extracts|pageimages|description|info|langlinks",
+        "prop": "extracts|pageimages|description|info|langlinks|pageprops",
+        "ppprop": "wikibase_item",
         "exintro": 1,
         "explaintext": 1,
         "exsentences": 3,
@@ -77,6 +78,45 @@ def turkish_page(title):
     return None
 
 
+def wikidata(params):
+    params = {**params, "format": "json"}
+    response = requests.get("https://www.wikidata.org/w/api.php", params=params, headers=HEADERS, timeout=8)
+    response.raise_for_status()
+    return response.json().get("entities", {})
+
+
+def claim_value(claims, prop):
+    for claim in claims.get(prop, []):
+        snak = claim.get("mainsnak", {})
+        if snak.get("snaktype") == "value":
+            return snak.get("datavalue", {}).get("value")
+    return None
+
+
+def wikidata_facts(item_id, lang):
+    # Wikidata holds facts in every language: a short description, birth date and birthplace.
+    facts = {"description": "", "born": "", "birthplace": ""}
+    entity = wikidata({"action": "wbgetentities", "ids": item_id, "props": "descriptions|claims",
+                       "languages": lang}).get(item_id, {})
+    description = entity.get("descriptions", {}).get(lang)
+    if description:
+        facts["description"] = description.get("value", "")
+
+    claims = entity.get("claims", {})
+    birth = claim_value(claims, "P569")  # P569 = date of birth
+    if birth and birth.get("precision", 0) >= 11:
+        facts["born"] = birth.get("time", "").lstrip("+")[:10]
+
+    place = claim_value(claims, "P19")  # P19 = place of birth
+    if place and place.get("id"):
+        labels = wikidata({"action": "wbgetentities", "ids": place["id"], "props": "labels",
+                           "languages": lang + "|en"}).get(place["id"], {}).get("labels", {})
+        label = labels.get(lang) or labels.get("en")
+        if label:
+            facts["birthplace"] = label.get("value", "")
+    return facts
+
+
 def photo_credit(file_name):
     response = requests.get("https://commons.wikimedia.org/w/api.php", params={
         "action": "query",
@@ -109,15 +149,30 @@ def driver_info(name, series_id, lang):
     if cached and datetime.now() < cached["until"]:
         return cached["info"]
 
-    info = {"found": False, "description": "", "extract": "", "url": "", "photo": "", "credit": None}
+    info = {"found": False, "description": "", "extract": "", "extract_lang": "", "url": "",
+            "photo": "", "credit": None, "born": "", "birthplace": ""}
     good_for = GOOD_FOR
     try:
         page = find_page(name, series_id)
         if page:
             info["found"] = True
-            info["description"] = page.get("description", "")
-            info["extract"] = page.get("extract", "")
             info["url"] = page.get("fullurl", "")
+            # The English text is only used when the site is in English.
+            if lang == "en":
+                info["description"] = page.get("description", "")
+                info["extract"] = page.get("extract", "")
+                info["extract_lang"] = "en"
+
+            item_id = page.get("pageprops", {}).get("wikibase_item")
+            if item_id:
+                try:
+                    facts = wikidata_facts(item_id, lang)
+                    info["born"] = facts["born"]
+                    info["birthplace"] = facts["birthplace"]
+                    if lang != "en" and facts["description"]:
+                        info["description"] = facts["description"]
+                except (requests.RequestException, ValueError):
+                    pass
 
             thumbnail = page.get("thumbnail", {}).get("source")
             if thumbnail and page.get("pageimage"):
@@ -131,6 +186,7 @@ def driver_info(name, series_id, lang):
                 turkish = turkish_page(links[0].get("title", ""))
                 if turkish and turkish.get("extract"):
                     info["extract"] = turkish["extract"]
+                    info["extract_lang"] = "tr"
                     info["description"] = turkish.get("description") or info["description"]
                     info["url"] = turkish.get("fullurl") or info["url"]
     except (requests.RequestException, ValueError):

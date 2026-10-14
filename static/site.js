@@ -239,11 +239,35 @@ async function fetchDriver(series, name) {
     }
 }
 
+function addFact(list, label, value) {
+    const term = document.createElement("dt");
+    term.textContent = label;
+    const detail = document.createElement("dd");
+    detail.textContent = value;
+    list.append(term, detail);
+}
+
+// Birth date in the page's language, plus the age: "16 Ekim 1999 · 26 yaşında".
+function birthText(isoDate) {
+    const born = new Date(isoDate + "T12:00:00Z");
+    const now = new Date();
+    let age = now.getUTCFullYear() - born.getUTCFullYear();
+    const birthdayPassed = now.getUTCMonth() > born.getUTCMonth()
+        || (now.getUTCMonth() === born.getUTCMonth() && now.getUTCDate() >= born.getUTCDate());
+    if (!birthdayPassed) {
+        age -= 1;
+    }
+    const date = born.toLocaleDateString(document.body.dataset.locale, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+    return date + " · " + driverDialog.dataset.age.replace("{age}", age);
+}
+
 function showDriverInfo(info) {
     const bio = driverPart(".driver-bio");
     const credit = driverPart(".driver-credit");
+    const facts = driverPart(".driver-facts");
     bio.textContent = "";
     credit.textContent = "";
+    facts.textContent = "";
 
     if (!info || !info.found) {
         const note = document.createElement("p");
@@ -254,6 +278,13 @@ function showDriverInfo(info) {
     }
 
     driverPart(".driver-desc").textContent = info.description || "";
+
+    if (info.born) {
+        addFact(facts, driverDialog.dataset.born, birthText(info.born));
+    }
+    if (info.birthplace) {
+        addFact(facts, driverDialog.dataset.birthplace, info.birthplace);
+    }
 
     // Text from Wikipedia goes in with textContent, never as HTML.
     for (const part of (info.extract || "").split("\n").filter(Boolean)) {
@@ -267,7 +298,9 @@ function showDriverInfo(info) {
         link.href = info.url;
         link.target = "_blank";
         link.rel = "noopener";
-        link.textContent = driverDialog.dataset.readMore;
+        // Say so when the article is only in English.
+        const sameLanguage = info.extract_lang === document.documentElement.lang;
+        link.textContent = sameLanguage ? driverDialog.dataset.readMore : driverDialog.dataset.readMoreEn;
         bio.appendChild(link);
     }
 
@@ -318,6 +351,7 @@ async function openDriver(button) {
         }
     }
 
+    driverPart(".driver-facts").textContent = "";
     driverPart(".driver-bio").innerHTML = '<div class="skeleton"><span></span><span></span><span></span></div>';
     driverPart(".driver-credit").textContent = "";
     driverPanel.open();
