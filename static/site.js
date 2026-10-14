@@ -97,3 +97,247 @@ document.addEventListener("keydown", function (event) {
         }
     }
 });
+
+// ---------- Panels: shared opening, closing and dragging ----------
+// Used by the race panel (calendar.js) and the driver panel below.
+
+function makeSheet(dialog, onClose) {
+    const panel = dialog.querySelector(".sheet-panel");
+
+    function updateScrollLock() {
+        const anyOpen = document.querySelector("dialog.sheet[open]") !== null;
+        document.documentElement.classList.toggle("sheet-locked", anyOpen);
+    }
+
+    function open() {
+        if (dialog.open) {
+            return;
+        }
+        dialog.showModal();
+        updateScrollLock();
+        requestAnimationFrame(function () {
+            dialog.classList.add("open");
+        });
+    }
+
+    function close() {
+        if (!dialog.open || dialog.classList.contains("closing")) {
+            return;
+        }
+        panel.style.transform = "";
+        dialog.classList.remove("open");
+        dialog.classList.add("closing");
+        function finish() {
+            dialog.classList.remove("closing");
+            dialog.close();
+            updateScrollLock();
+            if (onClose) {
+                onClose();
+            }
+        }
+        if (motionOff) {
+            finish();
+        } else {
+            setTimeout(finish, 320);
+        }
+    }
+
+    dialog.querySelector(".sheet-close").addEventListener("click", close);
+    dialog.addEventListener("cancel", function (event) {
+        event.preventDefault();
+        close();
+    });
+    // A click on the dark area around the panel closes it.
+    dialog.addEventListener("click", function (event) {
+        if (event.target === dialog) {
+            close();
+        }
+    });
+
+    // Drag the panel down to close it (phones).
+    let startY = null;
+    let delta = 0;
+
+    function down(event) {
+        if (window.innerWidth > 700 || event.target.closest("button")) {
+            return;
+        }
+        startY = event.clientY;
+        delta = 0;
+        panel.classList.add("dragging");
+    }
+
+    function move(event) {
+        if (startY === null) {
+            return;
+        }
+        delta = Math.max(0, event.clientY - startY);
+        panel.style.transform = "translateY(" + delta + "px)";
+    }
+
+    function up() {
+        if (startY === null) {
+            return;
+        }
+        startY = null;
+        panel.classList.remove("dragging");
+        if (delta > 110) {
+            close();
+        } else {
+            panel.style.transform = "";
+        }
+    }
+
+    for (const target of dialog.querySelectorAll(".sheet-head, .sheet-grab")) {
+        target.addEventListener("pointerdown", down);
+    }
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+
+    return { open: open, close: close };
+}
+
+// ---------- Driver panel: photo, season numbers and a short bio ----------
+
+const driverDialog = document.getElementById("driver-sheet");
+const driverCache = {};
+
+function driverPart(selector) {
+    return driverDialog.querySelector(selector);
+}
+
+function initials(name) {
+    const words = name.split(" ").filter(Boolean);
+    if (words.length === 0) {
+        return "";
+    }
+    const first = words[0][0];
+    const last = words.length > 1 ? words[words.length - 1][0] : "";
+    return (first + last).toUpperCase();
+}
+
+async function fetchDriver(series, name) {
+    const key = series + "|" + name;
+    if (driverCache[key]) {
+        return driverCache[key];
+    }
+    const url = document.body.dataset.driverInfo
+        + "?series=" + encodeURIComponent(series)
+        + "&name=" + encodeURIComponent(name)
+        + "&lang=" + encodeURIComponent(document.documentElement.lang);
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            return null;
+        }
+        const info = await response.json();
+        driverCache[key] = info;
+        return info;
+    } catch (error) {
+        return null;
+    }
+}
+
+function showDriverInfo(info) {
+    const bio = driverPart(".driver-bio");
+    const credit = driverPart(".driver-credit");
+    bio.textContent = "";
+    credit.textContent = "";
+
+    if (!info || !info.found) {
+        const note = document.createElement("p");
+        note.className = "note";
+        note.textContent = driverDialog.dataset.noInfo;
+        bio.appendChild(note);
+        return;
+    }
+
+    driverPart(".driver-desc").textContent = info.description || "";
+
+    // Text from Wikipedia goes in with textContent, never as HTML.
+    for (const part of (info.extract || "").split("\n").filter(Boolean)) {
+        const paragraph = document.createElement("p");
+        paragraph.textContent = part;
+        bio.appendChild(paragraph);
+    }
+    if (info.url) {
+        const link = document.createElement("a");
+        link.className = "more-link";
+        link.href = info.url;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = driverDialog.dataset.readMore;
+        bio.appendChild(link);
+    }
+
+    if (info.photo) {
+        const box = driverPart(".driver-photo");
+        const img = driverPart(".driver-photo img");
+        img.onload = function () {
+            box.classList.add("loaded");
+        };
+        img.src = info.photo;
+        img.hidden = false;
+    }
+
+    if (info.credit) {
+        const link = document.createElement("a");
+        link.href = info.credit.url;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = [info.credit.artist, info.credit.license, "Wikimedia Commons"].filter(Boolean).join(" · ");
+        credit.append(driverDialog.dataset.photo + ": ", link);
+    }
+}
+
+async function openDriver(button) {
+    const data = button.dataset;
+    const series = document.body.dataset.series;
+
+    driverDialog.style.setProperty("--team", data.color || "var(--muted)");
+    driverDialog.dataset.name = data.name;
+    driverPart(".driver-team").textContent = [data.flag, data.team].filter(Boolean).join("  ");
+    driverPart("#driver-name").textContent = data.name;
+    driverPart(".driver-desc").textContent = "";
+    driverPart(".driver-initials").textContent = initials(data.name);
+
+    const box = driverPart(".driver-photo");
+    const img = driverPart(".driver-photo img");
+    box.classList.remove("loaded");
+    img.hidden = true;
+    img.removeAttribute("src");
+
+    for (const stat of driverDialog.querySelectorAll("[data-stat]")) {
+        const value = data[stat.dataset.stat];
+        const number = stat.querySelector("b");
+        stat.hidden = value === undefined || value === "" || value === "None";
+        number.textContent = value || "";
+        if (!stat.hidden && !motionOff) {
+            countUp(number, 250 + Number(stat.style.getPropertyValue("--n")) * 80);
+        }
+    }
+
+    driverPart(".driver-bio").innerHTML = '<div class="skeleton"><span></span><span></span><span></span></div>';
+    driverPart(".driver-credit").textContent = "";
+    driverPanel.open();
+
+    const info = await fetchDriver(series, data.name);
+    if (driverDialog.dataset.name === data.name) {
+        showDriverInfo(info);
+    }
+}
+
+let driverPanel = null;
+
+if (driverDialog) {
+    driverPanel = makeSheet(driverDialog);
+    // One listener for every driver name, also those that load later inside the race panel.
+    document.addEventListener("click", function (event) {
+        const button = event.target.closest(".driver-link");
+        if (button) {
+            event.preventDefault();
+            openDriver(button);
+        }
+    });
+}

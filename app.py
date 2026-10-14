@@ -1,12 +1,13 @@
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 
-from flask import Flask, abort, make_response, redirect, render_template, request, url_for
+from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, url_for
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 import f1
 import ics
 import motogp
+import people
 import wsbk
 from core import add_statuses
 
@@ -96,6 +97,9 @@ TRANSLATIONS = {
         "results_later": "Results show up here once the sessions are done.",
         "next_session": "Next session",
         "leader": "Leader",
+        "read_more": "Read more on Wikipedia",
+        "photo": "Photo",
+        "no_info": "No extra info found for this driver.",
     },
     "tr": {
         "site_name": "Kerbline",
@@ -171,6 +175,9 @@ TRANSLATIONS = {
         "results_later": "Sonuçlar seanslar bitince burada görünecek.",
         "next_session": "Sıradaki seans",
         "leader": "Lider",
+        "read_more": "Wikipedia'da devamını oku",
+        "photo": "Fotoğraf",
+        "no_info": "Bu pilot hakkında ek bilgi bulunamadı.",
     },
 }
 
@@ -333,6 +340,20 @@ def race_results(series_id, season, round_number):
         response.headers["Cache-Control"] = "public, max-age=86400"
     else:
         response.headers["Cache-Control"] = "public, max-age=300"
+    return response
+
+
+# ---------- Driver info (photo + short bio) ----------
+
+@app.route("/driver-info")
+def driver_info():
+    series = get_series(request.args.get("series", ""))
+    name = (request.args.get("name") or "").strip()[:80]
+    if not name:
+        abort(404)
+    info = people.driver_info(name, series.ID, get_lang())
+    response = jsonify(info)
+    response.headers["Cache-Control"] = "public, max-age=86400"
     return response
 
 

@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 
 {% block content %}
+{# The data a driver button carries to the driver panel. #}
+{% macro driver_data(row) -%}
+data-name="{{ row.name }}" data-flag="{{ row.flag }}" data-team="{{ row.team }}" data-color="{{ row.color }}" data-pos="{{ row.position }}" data-points="{{ row.points }}"{% if row.wins is not none %} data-wins="{{ row.wins }}"{% endif %}
+{%- endmacro %}
+
 <section class="page-content">
     {% set filled_groups = standings.groups | selectattr("rows") | list %}
 
@@ -14,14 +19,14 @@
 
     <div class="leaders">
         {% for row in standings.drivers[:3] %}
-        <article class="leader spotlight" style="--team: {{ row.color }}; --i: {{ loop.index0 }}">
+        <button type="button" class="leader spotlight driver-link" style="--team: {{ row.color }}; --i: {{ loop.index0 }}" {{ driver_data(row) }}>
             <span class="leader-pos">{{ row.position }}</span>
             <span class="leader-name">{{ row.flag }} {{ row.name }}</span>
             <span class="leader-team">{{ row.team }}</span>
             <span class="leader-points"><b class="count-up">{{ row.points }}</b> {{ t.points }}</span>
             {% if driver_wins and row.wins %}<span class="leader-wins">{{ row.wins }} {{ t.wins | lower }}</span>{% endif %}
             <span class="points-bar" style="--pct: {{ row.pct }}%"></span>
-        </article>
+        </button>
         {% endfor %}
     </div>
 
@@ -42,7 +47,7 @@
                 <tr style="--team: {{ row.color }}; --pct: {{ row.pct }}%; --k: {{ loop.index0 }}">
                     <td class="pos">{{ row.position }}</td>
                     <td>
-                        <div>{{ row.flag }} {{ row.name }}</div>
+                        <button type="button" class="driver-link name-link" {{ driver_data(row) }}>{{ row.flag }} {{ row.name }}</button>
                         <div class="points-bar"></div>
                     </td>
                     <td class="team-cell">{{ row.team }}</td>

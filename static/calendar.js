@@ -370,41 +370,11 @@ async function openRace(card) {
     render();
 }
 
-function lockScroll(locked) {
-    document.documentElement.classList.toggle("sheet-locked", locked);
-}
+// Opening, closing and dragging the panel are shared with the driver panel (site.js).
+let raceSheet = null;
 
 function showSheet() {
-    if (sheet.open) {
-        return;
-    }
-    sheet.showModal();
-    lockScroll(true);
-    requestAnimationFrame(function () {
-        sheet.classList.add("open");
-    });
-}
-
-function closeSheet() {
-    if (!sheet.open || sheet.classList.contains("closing")) {
-        return;
-    }
-    const panel = sheetPart(".sheet-panel");
-    panel.style.transform = "";
-    sheet.classList.remove("open");
-    sheet.classList.add("closing");
-    const finish = function () {
-        sheet.classList.remove("closing");
-        sheet.close();
-        lockScroll(false);
-        delete sheet.dataset.round;
-        history.replaceState(null, "", location.pathname + location.search);
-    };
-    if (reduceMotion) {
-        finish();
-    } else {
-        setTimeout(finish, 320);
-    }
+    raceSheet.open();
 }
 
 function openRound(round) {
@@ -415,52 +385,6 @@ function openRound(round) {
     sheet.dataset.round = round;
     history.replaceState(null, "", "#round-" + round);
     openRace(card);
-}
-
-// Drag the panel down to close it (phones).
-function setupDrag() {
-    const panel = sheetPart(".sheet-panel");
-    const handle = sheetPart(".sheet-head");
-    const grab = sheetPart(".sheet-grab");
-    let startY = null;
-    let delta = 0;
-
-    function down(event) {
-        if (window.innerWidth > 700 || event.target.closest("button")) {
-            return;
-        }
-        startY = event.clientY;
-        delta = 0;
-        panel.classList.add("dragging");
-    }
-
-    function move(event) {
-        if (startY === null) {
-            return;
-        }
-        delta = Math.max(0, event.clientY - startY);
-        panel.style.transform = "translateY(" + delta + "px)";
-    }
-
-    function up() {
-        if (startY === null) {
-            return;
-        }
-        startY = null;
-        panel.classList.remove("dragging");
-        if (delta > 110) {
-            closeSheet();
-        } else {
-            panel.style.transform = "";
-        }
-    }
-
-    for (const target of [handle, grab]) {
-        target.addEventListener("pointerdown", down);
-    }
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    window.addEventListener("pointercancel", up);
 }
 
 if (sheet) {
@@ -483,18 +407,10 @@ if (sheet) {
         });
     }
 
-    sheetPart(".sheet-close").addEventListener("click", closeSheet);
-    sheet.addEventListener("cancel", function (event) {
-        event.preventDefault();
-        closeSheet();
+    raceSheet = makeSheet(sheet, function () {
+        delete sheet.dataset.round;
+        history.replaceState(null, "", location.pathname + location.search);
     });
-    // A click on the dark area around the panel closes it.
-    sheet.addEventListener("click", function (event) {
-        if (event.target === sheet) {
-            closeSheet();
-        }
-    });
-    setupDrag();
 
     // A link like kerbline.../wsbk/2026#round-12 opens that race directly.
     const match = location.hash.match(/^#round-(\d+)$/);

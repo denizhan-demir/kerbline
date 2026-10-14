@@ -14,7 +14,8 @@
     <link rel="preload" href="{{ url_for('static', filename='fonts/archivo.woff') }}" as="font" type="font/woff" crossorigin>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body data-locale="{{ 'tr-TR' if lang == 'tr' else 'en-GB' }}" data-tz-yours="{{ t.tz_yours }}" data-tz-track="{{ t.tz_track }}">
+<body data-locale="{{ 'tr-TR' if lang == 'tr' else 'en-GB' }}" data-tz-yours="{{ t.tz_yours }}" data-tz-track="{{ t.tz_track }}"
+      data-series="{{ series.ID if series else '' }}" data-driver-info="{{ url_for('driver_info') }}">
     {% set nav_series = series or default_series %}
     {% set nav_season = season or this_year %}
 
@@ -94,6 +95,36 @@
     </nav>
 
     {% block overlay %}{% endblock %}
+
+    <dialog class="sheet driver-sheet" id="driver-sheet" aria-labelledby="driver-name"
+            data-read-more="{{ t.read_more }}" data-photo="{{ t.photo }}" data-no-info="{{ t.no_info }}">
+        <div class="sheet-panel">
+            <div class="sheet-grab" aria-hidden="true"></div>
+            <header class="sheet-head driver-head">
+                <div class="driver-photo" aria-hidden="true">
+                    <span class="driver-initials"></span>
+                    <img alt="" hidden>
+                </div>
+                <div class="driver-heading">
+                    <p class="driver-team"></p>
+                    <h2 class="sheet-title" id="driver-name"></h2>
+                    <p class="sheet-place driver-desc"></p>
+                </div>
+                <button type="button" class="sheet-close" aria-label="{{ t.close }}">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+            </header>
+            <div class="sheet-body">
+                <div class="driver-stats">
+                    <div data-stat="pos" style="--n: 0"><b></b><span>{{ t.pos }}</span></div>
+                    <div data-stat="points" style="--n: 1"><b></b><span>{{ t.points }}</span></div>
+                    <div data-stat="wins" style="--n: 2"><b></b><span>{{ t.wins }}</span></div>
+                </div>
+                <div class="driver-bio"></div>
+                <p class="driver-credit"></p>
+            </div>
+        </div>
+    </dialog>
 
     <script src="{{ url_for('static', filename='site.js') }}"></script>
     {% block scripts %}{% endblock %}
