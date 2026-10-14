@@ -47,14 +47,20 @@
         <div class="page-head">
             <div class="title-row">
                 <h1>{{ series.NAME }}</h1>
-                <label class="season-select">
-                    <span class="visually-hidden">{{ t.season }}</span>
-                    <select onchange="location.href = this.value">
-                        {% for s in seasons | reverse %}
-                        <option value="{{ url_for(page, series_id=series.ID, season=s) }}" {% if s == season %}selected{% endif %}>{{ s }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
+                <details class="season-picker popover">
+                    <summary aria-label="{{ t.season }}: {{ season }}">
+                        <span>{{ season }}</span>
+                        <span class="season-chevron" aria-hidden="true"></span>
+                    </summary>
+                    <div class="season-menu">
+                        <p class="season-menu-title">{{ t.season }}</p>
+                        <nav class="season-grid">
+                            {% for s in seasons | reverse %}
+                            <a href="{{ url_for(page, series_id=series.ID, season=s) }}" class="{% if s == season %}active{% endif %}{% if s == this_year %} current{% endif %}" style="--n: {{ loop.index0 }}"{% if s == season %} aria-current="page"{% endif %}>{{ s }}</a>
+                            {% endfor %}
+                        </nav>
+                    </div>
+                </details>
             </div>
 
             <div class="toolbar">

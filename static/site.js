@@ -49,3 +49,51 @@ if (!motionOff) {
         document.querySelectorAll(".spotlight, .race-card:not(.static)").forEach(followPointer);
     }
 }
+
+// Small menus (season picker, add to calendar): close with an animation,
+// and close when you click somewhere else or press Escape.
+function closePopover(details) {
+    if (!details.open || details.classList.contains("closing")) {
+        return;
+    }
+    if (motionOff) {
+        details.open = false;
+        return;
+    }
+    details.classList.add("closing");
+    setTimeout(function () {
+        details.open = false;
+        details.classList.remove("closing");
+    }, 170);
+}
+
+for (const summary of document.querySelectorAll("details.popover > summary")) {
+    summary.addEventListener("click", function (event) {
+        const details = summary.parentElement;
+        if (details.open) {
+            event.preventDefault();
+            closePopover(details);
+            return;
+        }
+        for (const other of document.querySelectorAll("details.popover[open]")) {
+            closePopover(other);
+        }
+    });
+}
+
+document.addEventListener("click", function (event) {
+    for (const details of document.querySelectorAll("details.popover[open]")) {
+        if (!details.contains(event.target)) {
+            closePopover(details);
+        }
+    }
+});
+
+document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+        for (const details of document.querySelectorAll("details.popover[open]")) {
+            closePopover(details);
+            details.querySelector("summary").focus();
+        }
+    }
+});

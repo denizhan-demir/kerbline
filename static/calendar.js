@@ -540,22 +540,6 @@ for (const button of document.querySelectorAll(".copy-link")) {
     });
 }
 
-document.addEventListener("click", function (event) {
-    for (const menu of document.querySelectorAll("details.subscribe[open]")) {
-        if (!menu.contains(event.target)) {
-            menu.open = false;
-        }
-    }
-});
-
-document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape") {
-        for (const menu of document.querySelectorAll("details.subscribe[open]")) {
-            menu.open = false;
-        }
-    }
-});
-
 // ---------- Start ----------
 
 render();
