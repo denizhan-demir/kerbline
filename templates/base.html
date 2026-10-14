@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#0e0f14">
+    <meta name="theme-color" content="#0f1015">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="{{ t.site_name }}">
@@ -11,53 +11,42 @@
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
     <link rel="manifest" href="{{ url_for('manifest') }}">
+    <link rel="preload" href="{{ url_for('static', filename='fonts/archivo.woff') }}" as="font" type="font/woff" crossorigin>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body data-locale="{{ 'tr-TR' if lang == 'tr' else 'en-GB' }}" data-tz-yours="{{ t.tz_yours }}" data-tz-track="{{ t.tz_track }}">
     {% set nav_series = series or default_series %}
     {% set nav_season = season or this_year %}
 
-    <div class="layout">
-        <aside class="sidebar">
+    <header class="topbar">
+        <div class="topbar-inner">
             <a class="brand" href="{{ url_for('index') }}">
                 <span class="brand-name">{{ t.site_name }}</span>
                 <span class="kerb" aria-hidden="true"></span>
             </a>
-            <div class="nav-group">
-                <div class="nav-label">{{ t.series }}</div>
-                <nav class="series-nav">
-                    <a href="{{ url_for('index') }}" class="home-link{% if page == 'home' %} active{% endif %}">
-                        <span class="series-tag" aria-hidden="true">
-                            <svg viewBox="0 0 16 16"><path d="M8 1.8 1.5 7.2V14h4.6V9.8h3.8V14h4.6V7.2z" fill="currentColor"/></svg>
-                        </span>
-                        <span>{{ t.home }}</span>
-                    </a>
-                    {% for item in series_list %}
-                    <a href="{{ url_for('series_home', series_id=item.ID) }}" class="{% if series and item.ID == series.ID %}active{% endif %}">
-                        <span class="series-tag">{{ item.SHORT }}</span>
-                        <span>{{ item.NAME }}</span>
-                    </a>
-                    {% endfor %}
-                </nav>
-            </div>
+
+            <nav class="series-nav" aria-label="{{ t.series }}">
+                <a href="{{ url_for('index') }}" class="home-link{% if page == 'home' %} active{% endif %}">{{ t.home }}</a>
+                {% for item in series_list %}
+                <a href="{{ url_for('series_home', series_id=item.ID) }}" class="{% if series and item.ID == series.ID %}active{% endif %}">
+                    <span class="series-short">{{ item.SHORT }}</span>
+                    <span class="series-name">{{ item.NAME }}</span>
+                </a>
+                {% endfor %}
+            </nav>
+
             <nav class="langs">
                 <a href="?lang=en" class="{% if lang == 'en' %}active{% endif %}">EN</a>
                 <a href="?lang=tr" class="{% if lang == 'tr' %}active{% endif %}">TR</a>
             </nav>
-        </aside>
+        </div>
+    </header>
 
-        <div class="main">
-            {% block header %}
-            <header class="top">
-                <h1>{{ series.NAME }} <span class="season">{{ season }}</span></h1>
-            </header>
-
-            <nav class="tabs">
-                <a href="{{ url_for('calendar', series_id=series.ID, season=season) }}" class="{% if page == 'calendar' %}active{% endif %}">{{ t.calendar }}</a>
-                <a href="{{ url_for('standings', series_id=series.ID, season=season) }}" class="{% if page == 'standings' %}active{% endif %}">{{ t.standings }}</a>
-            </nav>
-
-            <div class="toolbar">
+    <main class="page">
+        {% block header %}
+        <div class="page-head">
+            <div class="title-row">
+                <h1>{{ series.NAME }}</h1>
                 <label class="season-select">
                     <span class="visually-hidden">{{ t.season }}</span>
                     <select onchange="location.href = this.value">
@@ -66,15 +55,22 @@
                         {% endfor %}
                     </select>
                 </label>
+            </div>
+
+            <div class="toolbar">
+                <nav class="tabs">
+                    <a href="{{ url_for('calendar', series_id=series.ID, season=season) }}" class="{% if page == 'calendar' %}active{% endif %}">{{ t.calendar }}</a>
+                    <a href="{{ url_for('standings', series_id=series.ID, season=season) }}" class="{% if page == 'standings' %}active{% endif %}">{{ t.standings }}</a>
+                </nav>
                 {% block toolbar %}{% endblock %}
             </div>
-            {% endblock %}
-
-            {% block content %}{% endblock %}
-
-            <footer class="footer">{{ t.disclaimer }}</footer>
         </div>
-    </div>
+        {% endblock %}
+
+        {% block content %}{% endblock %}
+
+        <footer class="footer">{{ t.disclaimer }}</footer>
+    </main>
 
     <nav class="bottom-nav">
         <a href="{{ url_for('index') }}" class="{% if page == 'home' %}active{% endif %}">
@@ -91,6 +87,9 @@
         </a>
     </nav>
 
+    {% block overlay %}{% endblock %}
+
+    <script src="{{ url_for('static', filename='site.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

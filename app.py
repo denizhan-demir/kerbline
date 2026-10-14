@@ -90,6 +90,12 @@ TRANSLATIONS = {
         "manufacturers": "Manufacturers",
         "season": "Season",
         "completed": "Completed races",
+        "schedule": "Schedule",
+        "results": "Results",
+        "close": "Close",
+        "results_later": "Results show up here once the sessions are done.",
+        "next_session": "Next session",
+        "leader": "Leader",
     },
     "tr": {
         "site_name": "Kerbline",
@@ -159,6 +165,12 @@ TRANSLATIONS = {
         "manufacturers": "Markalar",
         "season": "Sezon",
         "completed": "Tamamlanan yarışlar",
+        "schedule": "Program",
+        "results": "Sonuçlar",
+        "close": "Kapat",
+        "results_later": "Sonuçlar seanslar bitince burada görünecek.",
+        "next_session": "Sıradaki seans",
+        "leader": "Lider",
     },
 }
 

@@ -7,12 +7,12 @@
 </div>
 
 <details class="subscribe">
-    <summary>
+    <summary aria-label="{{ t.add_to_calendar }}">
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect x="3.5" y="5" width="17" height="15.5" rx="3" fill="none" stroke="currentColor" stroke-width="2"/>
             <path d="M3.5 10h17M8 3v4M16 3v4M12 13v5M9.5 15.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
-        {{ t.add_to_calendar }}
+        <span class="subscribe-text">{{ t.add_to_calendar }}</span>
     </summary>
     <div class="subscribe-menu">
         <a href="{{ feed.webcal }}">{{ t.apple_calendar }}</a>
@@ -24,27 +24,40 @@
 {% endblock %}
 
 {% block content %}
+{% macro race_date(race, css_class) %}
+{% if race.main.tbc %}
+<span class="{{ css_class }}" data-day="{{ race.main.utc[:10] }}">{{ race.main.date }}</span>
+{% else %}
+<span class="{{ css_class }}" data-utc="{{ race.main.utc }}" data-tz="{{ race.tz }}"></span>
+{% endif %}
+{% endmacro %}
+
 {% macro race_card(race, index) %}
-{% set expandable = race.lazy or not race.main.tbc %}
-<details id="round-{{ race.round }}" class="race {{ race.status }}{% if not expandable %} static{% endif %}" style="--i: {{ index }}" {% if race.status == "next" %}open{% endif %}>
-    <summary>
-        <span class="round">{{ race.round }}</span>
-        <span class="name">{{ race.flag }} {{ race.name }} <small>{{ race.country }}</small></span>
-        {% if race.status == "next" %}<span class="badge">{{ t.next }}</span>{% endif %}
-        {% if race.main.tbc %}
-        <span class="date">{{ race.main.date }}</span>
-        {% else %}
-        <span class="date" data-utc="{{ race.main.utc }}" data-tz="{{ race.tz }}"></span>
-        {% endif %}
-        {% if expandable %}<span class="chevron" aria-hidden="true"></span>{% endif %}
-    </summary>
-    {% if expandable %}
-    <div class="content">
-        {% if race.sessions %}
+{% set has_detail = race.lazy or not race.main.tbc %}
+<article id="round-{{ race.round }}" class="race-card {{ race.status }}{% if not has_detail %} static{% endif %}" style="--i: {{ index }}"
+         data-round="{{ race.round }}"
+         data-label="{{ t.round }} {{ race.round }}"
+         data-name="{{ race.flag }} {{ race.name }}"
+         data-place="{{ race.country }}"
+         data-tz="{{ race.tz }}"
+         {% if race.lazy or race.status != "upcoming" %}data-url="/results/{{ series.ID }}/{{ season }}/{{ race.round }}?lang={{ lang }}"{% endif %}>
+    <button type="button" class="race-open" {% if not has_detail %}disabled{% endif %}>
+        <span class="rc-top">
+            <span class="rc-round">{{ t.round }} {{ race.round }}</span>
+            {% if race.status == "next" %}<span class="badge">{{ t.next }}</span>{% endif %}
+            {% if race.status == "done" %}<span class="rc-check" aria-hidden="true"></span>{% endif %}
+        </span>
+        <span class="rc-flag" aria-hidden="true">{{ race.flag }}</span>
+        <span class="rc-name">{{ race.name }}</span>
+        <span class="rc-place">{{ race.country }}</span>
+        {{ race_date(race, "rc-date long-date") }}
+    </button>
+    {% if race.sessions %}
+    <template class="race-sessions">
         <ul class="sessions">
             {% for session in race.sessions %}
             {% if session.tbc %}
-            <li style="--j: {{ loop.index0 }}">
+            <li>
                 <span>{{ t.get(session.name, session.name) }}</span>
                 <span>{{ session.date }} · {{ t.tbc }}</span>
             </li>
@@ -57,32 +70,23 @@
             {% endif %}
             {% endfor %}
         </ul>
-        {% endif %}
-        {% if race.lazy or race.status != "upcoming" %}
-        <div class="results" data-url="/results/{{ series.ID }}/{{ season }}/{{ race.round }}?lang={{ lang }}">
-            <div class="skeleton" role="status" aria-label="{{ t.loading }}">
-                <span></span><span></span><span></span>
-            </div>
-        </div>
-        {% endif %}
-    </div>
+    </template>
     {% endif %}
-</details>
+</article>
 {% endmacro %}
 
 <section class="page-content">
     {% set next_race = races | selectattr("status", "equalto", "next") | first %}
     {% if next_race %}
-    <a class="hero" href="#round-{{ next_race.round }}">
-        <div class="hero-label">{{ t.next_race }} · {{ t.round }} {{ next_race.round }}</div>
+    <a class="hero spotlight" href="#round-{{ next_race.round }}" data-open="{{ next_race.round }}">
+        <div class="hero-label">
+            <span class="lights" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+            <span>{{ t.next_race }} · {{ t.round }} {{ next_race.round }}</span>
+        </div>
         <div class="hero-name">{{ next_race.flag }} {{ next_race.name }}</div>
         <div class="hero-meta">
-            {{ next_race.country }} ·
-            {% if next_race.main.tbc %}
-            {{ next_race.main.date }}
-            {% else %}
-            <span class="hero-date" data-utc="{{ next_race.main.utc }}" data-tz="{{ next_race.tz }}"></span>
-            {% endif %}
+            <span>{{ next_race.country }}</span>
+            {{ race_date(next_race, "hero-date") }}
         </div>
         {% if not next_race.main.tbc %}
         <div class="countdown" data-target="{{ next_race.main.utc }}">
@@ -93,14 +97,25 @@
         </div>
         {% endif %}
     </a>
+    {# Hidden copy of the next race: it holds the details the panel shows. #}
+    <div hidden>{{ race_card(next_race, 0) }}</div>
     {% endif %}
 
     {% if not races %}
-    <p>{{ t.not_available.format(season=season) }}</p>
+    <p class="note">{{ t.not_available.format(season=season) }}</p>
     {% endif %}
 
     {% set completed = races | selectattr("status", "equalto", "done") | list %}
-    {% set remaining = races | rejectattr("status", "equalto", "done") | list %}
+    {# The next race already has the big card at the top, so the grid starts after it. #}
+    {% set remaining = races | rejectattr("status", "equalto", "done") | rejectattr("status", "equalto", "next") | list %}
+
+    {% if remaining %}
+    <div class="race-grid">
+        {% for race in remaining %}
+        {{ race_card(race, loop.index0) }}
+        {% endfor %}
+    </div>
+    {% endif %}
 
     {% if completed %}
     <details class="completed-group">
@@ -110,17 +125,41 @@
             <span class="chevron" aria-hidden="true"></span>
         </summary>
         <div class="content">
-            {% for race in completed %}
-            {{ race_card(race, loop.index0) }}
-            {% endfor %}
+            <div class="race-grid">
+                {% for race in completed | reverse %}
+                {{ race_card(race, loop.index0) }}
+                {% endfor %}
+            </div>
         </div>
     </details>
     {% endif %}
-
-    {% for race in remaining %}
-    {{ race_card(race, loop.index0) }}
-    {% endfor %}
 </section>
+{% endblock %}
+
+{% block overlay %}
+<dialog class="sheet" id="race-sheet" aria-labelledby="sheet-title">
+    <div class="sheet-panel">
+        <div class="sheet-grab" aria-hidden="true"></div>
+        <header class="sheet-head">
+            <div>
+                <p class="sheet-round"></p>
+                <h2 class="sheet-title" id="sheet-title"></h2>
+                <p class="sheet-place"></p>
+            </div>
+            <button type="button" class="sheet-close" aria-label="{{ t.close }}">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+        </header>
+        <div class="sheet-tabs" role="tablist">
+            <button type="button" role="tab" data-tab="schedule">{{ t.schedule }}</button>
+            <button type="button" role="tab" data-tab="results">{{ t.results }}</button>
+        </div>
+        <div class="sheet-body">
+            <section class="sheet-pane" data-pane="schedule"></section>
+            <section class="sheet-pane" data-pane="results" data-empty="{{ t.results_later }}" data-loading="{{ t.loading }}"></section>
+        </div>
+    </div>
+</dialog>
 {% endblock %}
 
 {% block scripts %}

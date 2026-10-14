@@ -3,70 +3,96 @@
 {% block title %}{{ t.site_name }} · {{ t.up_next }}{% endblock %}
 
 {% block header %}
-<header class="top">
-    <h1>{{ t.up_next }}</h1>
-</header>
-
-<div class="toolbar">
-    <div class="toggle">
-        <button id="btn-yours" class="active">{{ t.your_time }}</button>
-        <button id="btn-track">{{ t.track_time }}</button>
+<div class="page-head">
+    <div class="title-row">
+        <h1>{{ t.up_next }}</h1>
+    </div>
+    <div class="toolbar">
+        <div class="toggle">
+            <button id="btn-yours" class="active">{{ t.your_time }}</button>
+            <button id="btn-track">{{ t.track_time }}</button>
+        </div>
     </div>
 </div>
 {% endblock %}
 
+{% macro countdown(race) %}
+<div class="countdown" data-target="{{ race.main.utc }}">
+    <div><span data-unit="days">–</span><small>{{ t.days }}</small></div>
+    <div><span data-unit="hours">–</span><small>{{ t.hours }}</small></div>
+    <div><span data-unit="minutes">–</span><small>{{ t.minutes }}</small></div>
+    <div><span data-unit="seconds">–</span><small>{{ t.seconds }}</small></div>
+</div>
+{% endmacro %}
+
+{% macro race_date(race) %}
+{% if race.main.tbc %}
+<span class="hero-date" data-day="{{ race.main.utc[:10] }}">{{ race.main.date }}</span>
+{% else %}
+<span class="hero-date" data-utc="{{ race.main.utc }}" data-tz="{{ race.tz }}"></span>
+{% endif %}
+{% endmacro %}
+
+{% macro next_session(item) %}
+{% set upcoming_session = item.sessions | rejectattr("past") | first %}
+{% if upcoming_session %}
+<p class="next-session">
+    <span class="next-session-label">{{ t.next_session }}</span>
+    <span>{{ t.get(upcoming_session.name, upcoming_session.name) }}</span>
+    <span class="hero-date" data-utc="{{ upcoming_session.utc }}" data-tz="{{ item.race.tz }}"></span>
+</p>
+{% endif %}
+{% endmacro %}
+
 {% block content %}
 <section class="page-content">
-    <div class="up-next">
-        {% for item in upcoming %}
+    {% set featured = upcoming | first %}
+    {% set others = upcoming[1:] %}
+
+    {% if featured and featured.race %}
+    {% set race = featured.race %}
+    <a class="hero spotlight" href="{{ url_for('calendar', series_id=featured.series.ID, season=featured.season) }}#round-{{ race.round }}">
+        <div class="hero-label">
+            <span class="series-short">{{ featured.series.SHORT }}</span>
+            <span class="lights" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+            <span>{{ featured.series.NAME }} · {{ t.round }} {{ race.round }}</span>
+            {% if featured.this_weekend %}<span class="badge">{{ t.this_weekend }}</span>{% endif %}
+        </div>
+        <div class="hero-name">{{ race.flag }} {{ race.name }}</div>
+        <div class="hero-meta">
+            <span>{{ race.country }}</span>
+            {{ race_date(race) }}
+        </div>
+        {% if not race.main.tbc %}{{ countdown(race) }}{% endif %}
+        {{ next_session(featured) }}
+    </a>
+    {% else %}
+    {% set others = upcoming %}
+    {% endif %}
+
+    <div class="card-grid">
+        {% for item in others %}
         {% set race = item.race %}
         {% set link = url_for('calendar', series_id=item.series.ID, season=item.season) %}
-        <article class="next-card{% if item.this_weekend %} soon{% endif %}" style="--i: {{ loop.index0 }}">
-            <div class="next-head">
-                <span class="series-tag">{{ item.series.SHORT }}</span>
+        <a class="next-card spotlight" href="{{ link }}{% if race %}#round-{{ race.round }}{% endif %}" style="--i: {{ loop.index0 }}">
+            <span class="next-head">
+                <span class="series-short">{{ item.series.SHORT }}</span>
                 <span>{{ item.series.NAME }}</span>
                 {% if item.this_weekend %}<span class="badge">{{ t.this_weekend }}</span>{% endif %}
-            </div>
+            </span>
 
             {% if race %}
-            <a class="next-race" href="{{ link }}#round-{{ race.round }}">
-                <span class="next-round">{{ t.round }} {{ race.round }}{% if item.season != this_year %} · {{ item.season }}{% endif %}</span>
-                <span class="next-name">{{ race.flag }} {{ race.name }}</span>
-                <span class="next-place">{{ race.country }}</span>
-            </a>
-
-            {% if race.main.tbc %}
-            <div class="next-date">{{ race.main.date }}</div>
-            {% else %}
-            <div class="next-date hero-date" data-utc="{{ race.main.utc }}" data-tz="{{ race.tz }}"></div>
-            <div class="countdown" data-target="{{ race.main.utc }}">
-                <div><span data-unit="days">–</span><small>{{ t.days }}</small></div>
-                <div><span data-unit="hours">–</span><small>{{ t.hours }}</small></div>
-                <div><span data-unit="minutes">–</span><small>{{ t.minutes }}</small></div>
-                <div><span data-unit="seconds">–</span><small>{{ t.seconds }}</small></div>
-            </div>
-            {% endif %}
-
-            {% if item.sessions %}
-            <ul class="sessions">
-                {% for session in item.sessions %}
-                <li class="{% if session.past %}past{% endif %}" data-utc="{{ session.utc }}" data-tz="{{ race.tz }}">
-                    <span class="day"></span>
-                    <span>{{ t.get(session.name, session.name) }}</span>
-                    <span class="time"></span>
-                </li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-
+            <span class="next-name">{{ race.flag }} {{ race.name }}</span>
+            <span class="next-place">{{ t.round }} {{ race.round }}{% if item.season != this_year %} · {{ item.season }}{% endif %} · {{ race.country }}</span>
+            <span class="next-date">{{ race_date(race) }}</span>
+            {% if not race.main.tbc %}{{ countdown(race) }}{% endif %}
+            {{ next_session(item) }}
             {% elif item.ok %}
-            <p class="note">{{ t.no_next }}</p>
+            <span class="note">{{ t.no_next }}</span>
             {% else %}
-            <p class="note">{{ t.unavailable }}</p>
+            <span class="note">{{ t.unavailable }}</span>
             {% endif %}
-
-            <a class="next-more" href="{{ link }}">{{ t.open_calendar }} →</a>
-        </article>
+        </a>
         {% endfor %}
     </div>
 </section>

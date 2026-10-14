@@ -1,4 +1,5 @@
 const MODE_KEY = "kerbline-time-mode";
+const LIGHTS_KEY = "kerbline-lights-shown";
 
 function loadMode() {
     try {
@@ -23,10 +24,11 @@ const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").match
 const EASE_OUT = "cubic-bezier(0.22, 1, 0.36, 1)";
 const EASE_IN_OUT = "cubic-bezier(0.4, 0, 0.2, 1)";
 
-const DATE_FORMAT = { day: "2-digit", month: "2-digit", year: "numeric" };
 const DAY_FORMAT = { weekday: "long", day: "numeric", month: "long" };
 const TIME_FORMAT = { hour: "2-digit", minute: "2-digit" };
 const LONG_FORMAT = { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" };
+const CARD_FORMAT = { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" };
+const DAY_ONLY_FORMAT = { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" };
 
 function format(utc, timeZone, options) {
     const finalOptions = { ...options };
@@ -36,25 +38,42 @@ function format(utc, timeZone, options) {
     return new Date(utc).toLocaleString(locale, finalOptions);
 }
 
-function render() {
-    for (const el of document.querySelectorAll(".date[data-utc]")) {
-        const timeZone = mode === "track" ? el.dataset.tz : null;
-        el.textContent = format(el.dataset.utc, timeZone, DATE_FORMAT);
-    }
+// ---------- Dates and session times ----------
 
+function render() {
     for (const el of document.querySelectorAll(".hero-date[data-utc]")) {
         const timeZone = mode === "track" ? el.dataset.tz : null;
         el.textContent = format(el.dataset.utc, timeZone, LONG_FORMAT);
     }
 
+    for (const el of document.querySelectorAll(".rc-date[data-utc]")) {
+        const timeZone = mode === "track" ? el.dataset.tz : null;
+        el.textContent = format(el.dataset.utc, timeZone, CARD_FORMAT);
+    }
+
+    // Races without a time yet: only the day.
+    for (const el of document.querySelectorAll("[data-day]")) {
+        el.textContent = new Date(el.dataset.day + "T12:00:00Z").toLocaleDateString(locale, DAY_ONLY_FORMAT);
+    }
+
+    const now = new Date();
     for (const list of document.querySelectorAll(".sessions")) {
         let previousDay = "";
+        let nextMarked = false;
         for (const item of list.querySelectorAll("li[data-utc]")) {
             const timeZone = mode === "track" ? item.dataset.tz : null;
             const day = format(item.dataset.utc, timeZone, DAY_FORMAT);
             item.querySelector(".time").textContent = format(item.dataset.utc, timeZone, TIME_FORMAT);
             item.querySelector(".day").textContent = day === previousDay ? "" : day;
             previousDay = day;
+
+            // Timeline dots: finished sessions are filled, the next one pulses.
+            const started = new Date(item.dataset.utc) < now;
+            item.classList.toggle("is-past", started);
+            item.classList.toggle("is-next", !started && !nextMarked);
+            if (!started) {
+                nextMarked = true;
+            }
         }
     }
 
@@ -66,17 +85,57 @@ function render() {
         const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         btnYours.title = document.body.dataset.tzYours + " (" + zone + ")";
         btnTrack.title = document.body.dataset.tzTrack;
+        movePill(btnYours.parentElement, "button.active");
     }
 }
 
-function updateCountdowns() {
-    for (const box of document.querySelectorAll(".countdown[data-target]")) {
-        updateCountdown(box);
+// A pill or line that slides to the chosen option.
+function movePill(container, activeSelector) {
+    const active = container.querySelector(activeSelector);
+    if (!active) {
+        return;
+    }
+    container.style.setProperty("--pill-x", active.offsetLeft + "px");
+    container.style.setProperty("--pill-w", active.offsetWidth + "px");
+    if (!container.classList.contains("ready")) {
+        // The first placement happens without animation, after that it slides.
+        requestAnimationFrame(function () {
+            container.classList.add("ready");
+        });
     }
 }
 
-function updateCountdown(box) {
-    let remaining = Math.max(0, new Date(box.dataset.target) - new Date());
+// ---------- Countdown with rolling digits ----------
+
+function buildDigits(span, length) {
+    span.textContent = "";
+    for (let i = 0; i < length; i++) {
+        const digit = document.createElement("span");
+        digit.className = "digit";
+        const reel = document.createElement("span");
+        reel.className = "reel";
+        for (let n = 0; n <= 9; n++) {
+            const b = document.createElement("b");
+            b.textContent = n;
+            reel.appendChild(b);
+        }
+        digit.appendChild(reel);
+        span.appendChild(digit);
+    }
+}
+
+function setDigits(span, text) {
+    if (span.querySelectorAll(".reel").length !== text.length) {
+        buildDigits(span, text.length);
+    }
+    const reels = span.querySelectorAll(".reel");
+    for (let i = 0; i < text.length; i++) {
+        reels[i].style.setProperty("--n", text[i]);
+    }
+}
+
+function countdownParts(target) {
+    let remaining = Math.max(0, new Date(target) - new Date());
     const days = Math.floor(remaining / 86400000);
     remaining -= days * 86400000;
     const hours = Math.floor(remaining / 3600000);
@@ -84,14 +143,88 @@ function updateCountdown(box) {
     const minutes = Math.floor(remaining / 60000);
     remaining -= minutes * 60000;
     const seconds = Math.floor(remaining / 1000);
-
-    box.querySelector('[data-unit="days"]').textContent = days;
-    box.querySelector('[data-unit="hours"]').textContent = String(hours).padStart(2, "0");
-    box.querySelector('[data-unit="minutes"]').textContent = String(minutes).padStart(2, "0");
-    box.querySelector('[data-unit="seconds"]').textContent = String(seconds).padStart(2, "0");
+    return {
+        days: String(days),
+        hours: String(hours).padStart(2, "0"),
+        minutes: String(minutes).padStart(2, "0"),
+        seconds: String(seconds).padStart(2, "0"),
+    };
 }
 
-function setupDetails(details, onOpen) {
+function showCountdown(box, zero) {
+    const parts = countdownParts(box.dataset.target);
+    for (const unit in parts) {
+        const span = box.querySelector('[data-unit="' + unit + '"]');
+        if (span) {
+            setDigits(span, zero ? "0".repeat(parts[unit].length) : parts[unit]);
+        }
+    }
+}
+
+function updateCountdowns() {
+    for (const box of document.querySelectorAll(".countdown[data-target]:not([data-waiting])")) {
+        showCountdown(box, false);
+    }
+}
+
+// ---------- Start lights ----------
+
+function startLights() {
+    const sets = document.querySelectorAll(".lights");
+    const boxes = document.querySelectorAll(".countdown[data-target]");
+    let alreadyShown = false;
+    try {
+        alreadyShown = sessionStorage.getItem(LIGHTS_KEY) === "yes";
+        sessionStorage.setItem(LIGHTS_KEY, "yes");
+    } catch (error) {
+        alreadyShown = false;
+    }
+
+    if (reduceMotion) {
+        updateCountdowns();
+        return;
+    }
+
+    // Every digit starts at 0 and rolls to the real time.
+    for (const box of boxes) {
+        showCountdown(box, true);
+        box.dataset.waiting = "true";
+    }
+
+    function release() {
+        for (const box of boxes) {
+            delete box.dataset.waiting;
+        }
+        updateCountdowns();
+    }
+
+    // The lights are shown once per visit; after that the digits just roll in.
+    if (sets.length === 0 || alreadyShown) {
+        setTimeout(release, 300);
+        return;
+    }
+
+    for (let i = 0; i < 5; i++) {
+        setTimeout(function () {
+            for (const set of sets) {
+                set.children[i].classList.add("on");
+            }
+        }, 400 + i * 240);
+    }
+    // Lights out and away we go.
+    setTimeout(function () {
+        for (const set of sets) {
+            for (const light of set.children) {
+                light.classList.remove("on");
+            }
+        }
+        release();
+    }, 400 + 5 * 240 + 450);
+}
+
+// ---------- Opening and closing (completed races, result tables) ----------
+
+function setupDetails(details) {
     const summary = details.querySelector("summary");
     const content = details.querySelector(".content");
     if (!summary || !content) {
@@ -99,9 +232,6 @@ function setupDetails(details, onOpen) {
     }
 
     summary.addEventListener("click", function (event) {
-        if (!details.open && onOpen) {
-            onOpen(details);
-        }
         if (reduceMotion) {
             return;
         }
@@ -117,7 +247,7 @@ function setupDetails(details, onOpen) {
                     { height: content.offsetHeight + "px", opacity: 1 },
                     { height: "0px", opacity: 0 }
                 ],
-                { duration: 320, easing: EASE_IN_OUT, fill: "forwards" }
+                { duration: 380, easing: EASE_IN_OUT, fill: "forwards" }
             );
             closing.onfinish = function () {
                 details.open = false;
@@ -131,48 +261,249 @@ function setupDetails(details, onOpen) {
                     { height: "0px", opacity: 0 },
                     { height: content.offsetHeight + "px", opacity: 1 }
                 ],
-                { duration: 520, easing: EASE_OUT }
+                { duration: 560, easing: EASE_OUT }
             );
         }
     });
 }
 
-async function loadResults(details) {
-    const box = details.querySelector(".results[data-url]");
-    if (!box || box.dataset.loaded) {
-        return;
+// ---------- Race panel (bottom sheet on phones, window on computers) ----------
+
+const sheet = document.getElementById("race-sheet");
+const resultsCache = {};
+
+function sheetPart(selector) {
+    return sheet.querySelector(selector);
+}
+
+function showTab(name) {
+    for (const button of sheet.querySelectorAll(".sheet-tabs button")) {
+        const active = button.dataset.tab === name;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-selected", active ? "true" : "false");
     }
-    box.dataset.loaded = "true";
+    for (const pane of sheet.querySelectorAll(".sheet-pane")) {
+        pane.hidden = pane.dataset.pane !== name;
+    }
+    movePill(sheetPart(".sheet-tabs"), "button.active");
+}
+
+async function fetchResults(url) {
+    if (resultsCache[url]) {
+        return resultsCache[url];
+    }
     const controller = new AbortController();
     const timer = setTimeout(function () {
         controller.abort();
     }, 15000);
     try {
-        const response = await fetch(box.dataset.url, { signal: controller.signal });
-        const html = (await response.text()).trim();
+        const response = await fetch(url, { signal: controller.signal });
         if (!response.ok) {
-            delete box.dataset.loaded;
+            return "";
         }
-        const startHeight = box.offsetHeight;
-        box.innerHTML = html;
-        render();
-        const endHeight = box.offsetHeight;
-        if (!reduceMotion && details.open && startHeight !== endHeight) {
-            box.animate(
-                [{ height: startHeight + "px" }, { height: endHeight + "px" }],
-                { duration: 500, easing: EASE_OUT }
-            );
-        }
-        for (const inner of box.querySelectorAll("details.full-results")) {
-            setupDetails(inner, null);
-        }
+        const html = (await response.text()).trim();
+        resultsCache[url] = html;
+        return html;
     } catch (error) {
-        box.innerHTML = "";
-        delete box.dataset.loaded;
+        return "";
     } finally {
         clearTimeout(timer);
     }
 }
+
+async function openRace(card) {
+    const schedule = sheetPart('[data-pane="schedule"]');
+    const results = sheetPart('[data-pane="results"]');
+    const resultsTab = sheetPart('[data-tab="results"]');
+    const done = card.classList.contains("done") || card.classList.contains("past");
+
+    sheetPart(".sheet-round").textContent = card.dataset.label;
+    sheetPart(".sheet-title").textContent = card.dataset.name;
+    sheetPart(".sheet-place").textContent = card.dataset.place;
+
+    // F1 sends the sessions with the page; MotoGP and WorldSBK send them with the results.
+    schedule.innerHTML = "";
+    const template = card.querySelector("template.race-sessions");
+    if (template) {
+        schedule.appendChild(template.content.cloneNode(true));
+    }
+    results.innerHTML = "";
+    resultsTab.hidden = !card.dataset.url;
+
+    showSheet();
+    showTab(done && card.dataset.url ? "results" : "schedule");
+    render();
+
+    if (!card.dataset.url) {
+        return;
+    }
+
+    if (!schedule.children.length) {
+        schedule.innerHTML = '<div class="skeleton"><span></span><span></span><span></span></div>';
+    }
+    results.innerHTML = '<div class="skeleton"><span></span><span></span><span></span></div>';
+
+    const html = await fetchResults(card.dataset.url);
+    if (sheet.dataset.round !== card.dataset.round) {
+        return;
+    }
+    const box = document.createElement("div");
+    box.innerHTML = html;
+
+    // The session list goes to the "Schedule" tab, everything else to "Results".
+    const sessions = box.querySelector(".sessions");
+    if (sessions) {
+        sessions.remove();
+    }
+    if (!template) {
+        schedule.innerHTML = "";
+        if (sessions) {
+            schedule.appendChild(sessions);
+        }
+    }
+
+    const hasResults = box.querySelector(".outcome > *, .tables > *");
+    results.innerHTML = hasResults ? box.innerHTML : '<p class="note">' + results.dataset.empty + "</p>";
+    for (const inner of results.querySelectorAll("details.full-results")) {
+        setupDetails(inner);
+    }
+    render();
+}
+
+function lockScroll(locked) {
+    document.documentElement.classList.toggle("sheet-locked", locked);
+}
+
+function showSheet() {
+    if (sheet.open) {
+        return;
+    }
+    sheet.showModal();
+    lockScroll(true);
+    requestAnimationFrame(function () {
+        sheet.classList.add("open");
+    });
+}
+
+function closeSheet() {
+    if (!sheet.open || sheet.classList.contains("closing")) {
+        return;
+    }
+    const panel = sheetPart(".sheet-panel");
+    panel.style.transform = "";
+    sheet.classList.remove("open");
+    sheet.classList.add("closing");
+    const finish = function () {
+        sheet.classList.remove("closing");
+        sheet.close();
+        lockScroll(false);
+        delete sheet.dataset.round;
+        history.replaceState(null, "", location.pathname + location.search);
+    };
+    if (reduceMotion) {
+        finish();
+    } else {
+        setTimeout(finish, 320);
+    }
+}
+
+function openRound(round) {
+    const card = document.getElementById("round-" + round);
+    if (!card || card.classList.contains("static")) {
+        return;
+    }
+    sheet.dataset.round = round;
+    history.replaceState(null, "", "#round-" + round);
+    openRace(card);
+}
+
+// Drag the panel down to close it (phones).
+function setupDrag() {
+    const panel = sheetPart(".sheet-panel");
+    const handle = sheetPart(".sheet-head");
+    const grab = sheetPart(".sheet-grab");
+    let startY = null;
+    let delta = 0;
+
+    function down(event) {
+        if (window.innerWidth > 700 || event.target.closest("button")) {
+            return;
+        }
+        startY = event.clientY;
+        delta = 0;
+        panel.classList.add("dragging");
+    }
+
+    function move(event) {
+        if (startY === null) {
+            return;
+        }
+        delta = Math.max(0, event.clientY - startY);
+        panel.style.transform = "translateY(" + delta + "px)";
+    }
+
+    function up() {
+        if (startY === null) {
+            return;
+        }
+        startY = null;
+        panel.classList.remove("dragging");
+        if (delta > 110) {
+            closeSheet();
+        } else {
+            panel.style.transform = "";
+        }
+    }
+
+    for (const target of [handle, grab]) {
+        target.addEventListener("pointerdown", down);
+    }
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+}
+
+if (sheet) {
+    for (const button of document.querySelectorAll(".race-open")) {
+        button.addEventListener("click", function () {
+            openRound(button.closest(".race-card").dataset.round);
+        });
+    }
+
+    for (const link of document.querySelectorAll("[data-open]")) {
+        link.addEventListener("click", function (event) {
+            event.preventDefault();
+            openRound(link.dataset.open);
+        });
+    }
+
+    for (const button of sheet.querySelectorAll(".sheet-tabs button")) {
+        button.addEventListener("click", function () {
+            showTab(button.dataset.tab);
+        });
+    }
+
+    sheetPart(".sheet-close").addEventListener("click", closeSheet);
+    sheet.addEventListener("cancel", function (event) {
+        event.preventDefault();
+        closeSheet();
+    });
+    // A click on the dark area around the panel closes it.
+    sheet.addEventListener("click", function (event) {
+        if (event.target === sheet) {
+            closeSheet();
+        }
+    });
+    setupDrag();
+
+    // A link like kerbline.../wsbk/2026#round-12 opens that race directly.
+    const match = location.hash.match(/^#round-(\d+)$/);
+    if (match) {
+        openRound(match[1]);
+    }
+}
+
+// ---------- Time toggle ----------
 
 const yoursButton = document.getElementById("btn-yours");
 const trackButton = document.getElementById("btn-track");
@@ -225,17 +556,14 @@ document.addEventListener("keydown", function (event) {
     }
 });
 
-render();
-updateCountdowns();
-setInterval(updateCountdowns, 1000);
+// ---------- Start ----------
 
-for (const details of document.querySelectorAll("details.race:not(.static)")) {
-    setupDetails(details, loadResults);
-    if (details.open) {
-        loadResults(details);
-    }
-}
+render();
+startLights();
+setInterval(updateCountdowns, 1000);
+setInterval(render, 60000);
+window.addEventListener("resize", render);
 
 for (const group of document.querySelectorAll("details.completed-group")) {
-    setupDetails(group, null);
+    setupDetails(group);
 }
