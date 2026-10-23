@@ -211,6 +211,17 @@ def get_seasons(series, season):
     return list(range(series.FIRST_SEASON, this_year + 2))
 
 
+@app.after_request
+def security_headers(response):
+    # Small safety rules the browser follows on every page:
+    # don't guess file types, don't let other sites show Kerbline inside a frame,
+    # and only send our domain name (not the full link) when someone clicks out to another site.
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    return response
+
+
 def error_page(lang):
     t = TRANSLATIONS[lang]
     return f"<h1>{t['site_name']}</h1><p>{t['unavailable']}</p>", 503
@@ -357,9 +368,15 @@ def race_results(series_id, season, round_number):
 def driver_info():
     series = get_series(request.args.get("series", ""))
     name = (request.args.get("name") or "").strip()[:80]
-    if not name:
+    if not name or not people.valid_name(name):
         abort(404)
     info = people.driver_info(name, series.ID, get_lang())
+    if info is None:
+        # Too many lookups at once: try again in a moment (the browser does not store this answer).
+        response = jsonify({"found": False})
+        response.status_code = 503
+        response.headers["Retry-After"] = "5"
+        return response
     response = jsonify(info)
     response.headers["Cache-Control"] = "public, max-age=86400"
     return response

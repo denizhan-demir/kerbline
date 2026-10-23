@@ -16,8 +16,32 @@ SEARCH_WORDS = {"f1": "Formula One racing driver", "motogp": "motorcycle racer",
 GOOD_FOR = timedelta(days=7)
 RETRY_AFTER = timedelta(minutes=10)
 
+# Anyone can call /driver-info with any name, so we set limits:
+# at most this many names are kept in memory...
+MAX_CACHE = 1000
+# ...and at most this many Wikipedia lookups run at the same time.
+# The site has 4 threads; the other ones stay free for the normal pages.
+lookup_slots = threading.BoundedSemaphore(2)
+
 cache = {}
 cache_lock = threading.Lock()
+
+
+def valid_name(name):
+    # Real names only: letters, spaces, dots, hyphens and apostrophes
+    # ("Pato O'Ward", "Jean-Éric Vergne", "Toprak Razgatlıoğlu").
+    if not any(c.isalpha() for c in name):
+        return False
+    return all(c.isalpha() or c.isspace() or c in ".'-’" for c in name)
+
+
+def remember(key, info, good_for):
+    with cache_lock:
+        cache.pop(key, None)
+        if len(cache) >= MAX_CACHE:
+            # Full: forget the oldest name to make room.
+            cache.pop(next(iter(cache)))
+        cache[key] = {"info": info, "until": datetime.now() + good_for}
 
 
 def plain(text):
@@ -143,12 +167,22 @@ def photo_credit(file_name):
 
 
 def driver_info(name, series_id, lang):
+    # Returns None when too many lookups are running; the page then simply shows "no info".
     key = (plain(name), series_id, lang)
     with cache_lock:
         cached = cache.get(key)
     if cached and datetime.now() < cached["until"]:
         return cached["info"]
 
+    if not lookup_slots.acquire(blocking=False):
+        return None
+    try:
+        return look_up(name, series_id, lang, key)
+    finally:
+        lookup_slots.release()
+
+
+def look_up(name, series_id, lang, key):
     info = {"found": False, "description": "", "extract": "", "extract_lang": "", "url": "",
             "photo": "", "credit": None, "born": "", "birthplace": ""}
     good_for = GOOD_FOR
@@ -193,6 +227,5 @@ def driver_info(name, series_id, lang):
         # Wikipedia did not answer: show what we have and try again a bit later.
         good_for = RETRY_AFTER
 
-    with cache_lock:
-        cache[key] = {"info": info, "until": datetime.now() + good_for}
+    remember(key, info, good_for)
     return info
