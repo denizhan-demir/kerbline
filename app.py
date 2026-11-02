@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, url_for
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -15,7 +15,11 @@ app = Flask(__name__)
 # Render sits in front of the app; this makes links use https:// on the live site.
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
-SERIES = {f1.ID: f1, motogp.ID: motogp, wsbk.ID: wsbk}
+# f1 and wsbk are files (modules), the MotoGP classes are objects of one class.
+# The rest of the app doesn't care: it only reads ID, NAME, get_races() and so on.
+SERIES = {}
+for item in (f1, motogp.MOTOGP, motogp.MOTO2, motogp.MOTO3, wsbk):
+    SERIES[item.ID] = item
 DEFAULT_SERIES = f1.ID
 
 # How far ahead the calendar feed loads every session of MotoGP and WorldSBK rounds.
@@ -25,7 +29,7 @@ FEED_DETAIL_ROUNDS = 3
 MANIFEST = {
     "name": "Kerbline",
     "short_name": "Kerbline",
-    "description": "F1, MotoGP and WorldSBK calendars, results and standings",
+    "description": "F1, MotoGP, Moto2, Moto3 and WorldSBK calendars, results and standings",
     "start_url": "/",
     "scope": "/",
     "display": "standalone",
@@ -104,6 +108,9 @@ TRANSLATIONS = {
         "age": "age {age}",
         "photo": "Photo",
         "no_info": "No extra info found for this driver.",
+        "fav_add": "Add to favourites",
+        "fav_on": "Your favourite",
+        "favourite": "Your favourite",
     },
     "tr": {
         "site_name": "Kerbline",
@@ -186,6 +193,9 @@ TRANSLATIONS = {
         "age": "{age} yaşında",
         "photo": "Fotoğraf",
         "no_info": "Bu pilot hakkında ek bilgi bulunamadı.",
+        "fav_add": "Favorilere ekle",
+        "fav_on": "Favori pilotun",
+        "favourite": "Favorin",
     },
 }
 
@@ -291,13 +301,34 @@ def next_race_for(series, now):
     return item
 
 
+def favourite_for(series, season):
+    # The favourite is picked in the driver panel; the browser keeps it in a cookie like "fav_f1".
+    name = unquote(request.cookies.get(f"fav_{series.ID}", ""))[:80]
+    if not name:
+        return None
+    favourite = {"name": name, "position": None, "points": None}
+    try:
+        for row in series.get_standings(season)["drivers"]:
+            if row["name"] == name:
+                favourite["position"] = row["position"]
+                favourite["points"] = row["points"]
+                break
+    except Exception:
+        app.logger.exception("Could not load standings for the favourite")
+    return favourite
+
+
 @app.route("/")
 def index():
     lang = get_lang()
     now = datetime.now(timezone.utc)
     upcoming = []
     for series in SERIES.values():
-        upcoming.append(next_race_for(series, now))
+        # Moto2 and Moto3 share the MotoGP weekend, so they stay off the home page.
+        if getattr(series, "ON_HOME", True):
+            item = next_race_for(series, now)
+            item["favourite"] = favourite_for(series, now.year)
+            upcoming.append(item)
     # Soonest race first; series without a next race go last.
     upcoming.sort(key=lambda item: item["race"]["main"]["when"] if item["race"] else datetime.max.replace(tzinfo=timezone.utc))
     return render_page("home.html", lang, page="home", series=None, upcoming=upcoming)

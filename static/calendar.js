@@ -367,6 +367,7 @@ async function openRace(card) {
     for (const inner of results.querySelectorAll("details.full-results")) {
         setupDetails(inner);
     }
+    markFavourites();
     render();
 }
 

@@ -198,6 +198,46 @@ function makeSheet(dialog, onClose) {
     return { open: open, close: close };
 }
 
+// ---------- Favourite driver (one per series) ----------
+// Kept in a cookie like "fav_f1=Max%20Verstappen", so the server can show it on the home page too.
+
+function getFavourite(series) {
+    const prefix = "fav_" + series + "=";
+    for (const part of document.cookie.split("; ")) {
+        if (part.startsWith(prefix)) {
+            try {
+                return decodeURIComponent(part.slice(prefix.length));
+            } catch (error) {
+                return "";
+            }
+        }
+    }
+    return "";
+}
+
+function setFavourite(series, name) {
+    // An empty name deletes the cookie (max-age=0).
+    const maxAge = name ? 60 * 60 * 24 * 365 : 0;
+    document.cookie = "fav_" + series + "=" + encodeURIComponent(name)
+        + "; path=/; max-age=" + maxAge + "; SameSite=Lax";
+}
+
+// Gives the favourite's rows and cards a gold star. Also called after results load in the race panel.
+function markFavourites() {
+    const series = document.body.dataset.series;
+    const favourite = series ? getFavourite(series) : "";
+    for (const link of document.querySelectorAll(".driver-link")) {
+        const isFavourite = favourite !== "" && link.dataset.name === favourite;
+        link.classList.toggle("is-fav", isFavourite);
+        const row = link.closest("tr");
+        if (row) {
+            row.classList.toggle("is-fav", isFavourite);
+        }
+    }
+}
+
+markFavourites();
+
 // ---------- Driver panel: photo, season numbers and a short bio ----------
 
 const driverDialog = document.getElementById("driver-sheet");
@@ -354,6 +394,7 @@ async function openDriver(button) {
     driverPart(".driver-facts").textContent = "";
     driverPart(".driver-bio").innerHTML = '<div class="skeleton"><span></span><span></span><span></span></div>';
     driverPart(".driver-credit").textContent = "";
+    showFavouriteButton(series === "" ? null : getFavourite(series) === data.name);
     driverPanel.open();
 
     const info = await fetchDriver(series, data.name);
@@ -362,10 +403,34 @@ async function openDriver(button) {
     }
 }
 
+// The star button in the driver panel. null hides it (pages without a series).
+function showFavouriteButton(pressed) {
+    const button = driverPart(".fav-toggle");
+    button.hidden = pressed === null;
+    button.setAttribute("aria-pressed", pressed ? "true" : "false");
+    button.querySelector("span").textContent = pressed ? button.dataset.on : button.dataset.add;
+}
+
 let driverPanel = null;
 
 if (driverDialog) {
     driverPanel = makeSheet(driverDialog);
+
+    const favouriteButton = driverPart(".fav-toggle");
+    favouriteButton.addEventListener("click", function () {
+        const series = document.body.dataset.series;
+        const name = driverDialog.dataset.name;
+        const pressed = favouriteButton.getAttribute("aria-pressed") === "true";
+        // Picking a new favourite replaces the old one; pressing again removes it.
+        setFavourite(series, pressed ? "" : name);
+        showFavouriteButton(!pressed);
+        markFavourites();
+        if (!pressed && !motionOff) {
+            favouriteButton.classList.remove("pop");
+            void favouriteButton.offsetWidth;  // restarts the animation
+            favouriteButton.classList.add("pop");
+        }
+    });
     // One listener for every driver name, also those that load later inside the race panel.
     document.addEventListener("click", function (event) {
         const button = event.target.closest(".driver-link");

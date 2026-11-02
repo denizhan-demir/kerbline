@@ -44,6 +44,18 @@
 {% endif %}
 {% endmacro %}
 
+{# Your favourite driver in this series (picked with the star in the driver panel). #}
+{% macro favourite_line(item) %}
+{% set fav = item.favourite %}
+{% if fav %}
+<p class="fav-line">
+    <span class="fav-label">★ {{ t.favourite }}</span>
+    <span class="fav-name">{{ fav.name }}</span>
+    {% if fav.position %}<span class="fav-stat">P{{ fav.position }} · {{ fav.points }} {{ t.points }}</span>{% endif %}
+</p>
+{% endif %}
+{% endmacro %}
+
 {% block content %}
 <section class="page-content">
     {% set featured = upcoming | first %}
@@ -65,6 +77,7 @@
         </div>
         {% if not race.main.tbc %}{{ countdown(race) }}{% endif %}
         {{ next_session(featured) }}
+        {{ favourite_line(featured) }}
     </a>
     {% else %}
     {% set others = upcoming %}
@@ -92,6 +105,7 @@
             {% else %}
             <span class="note">{{ t.unavailable }}</span>
             {% endif %}
+            {{ favourite_line(item) }}
         </a>
         {% endfor %}
     </div>

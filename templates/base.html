@@ -110,6 +110,10 @@
                     <p class="driver-team"></p>
                     <h2 class="sheet-title" id="driver-name"></h2>
                     <p class="sheet-place driver-desc"></p>
+                    <button type="button" class="fav-toggle" aria-pressed="false" data-add="{{ t.fav_add }}" data-on="{{ t.fav_on }}">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/></svg>
+                        <span>{{ t.fav_add }}</span>
+                    </button>
                 </div>
                 <button type="button" class="sheet-close" aria-label="{{ t.close }}">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>

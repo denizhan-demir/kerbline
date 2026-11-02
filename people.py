@@ -12,7 +12,8 @@ import requests
 # Wikimedia asks every app to say who it is. Change the link to your own site if you like.
 HEADERS = {"User-Agent": "Kerbline/1.0 (unofficial motorsport calendar; https://github.com/denizhan-demir)"}
 
-SEARCH_WORDS = {"f1": "Formula One racing driver", "motogp": "motorcycle racer", "wsbk": "motorcycle racer"}
+SEARCH_WORDS = {"f1": "Formula One racing driver", "motogp": "motorcycle racer", "moto2": "motorcycle racer",
+                "moto3": "motorcycle racer", "wsbk": "motorcycle racer"}
 GOOD_FOR = timedelta(days=7)
 RETRY_AFTER = timedelta(minutes=10)
 
