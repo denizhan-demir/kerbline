@@ -4,6 +4,8 @@
 // The "?" button in the top bar plays the tour of the current page again.
 
 const TOUR_KEY = "kerbline-tour-seen";
+// Set right before the page reloads in another language, so the welcome card comes straight back.
+const TOUR_RESUME_KEY = "kerbline-tour-resume";
 const tourMotionOff = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const tourData = JSON.parse(document.getElementById("tour-data").textContent);
 let tour = null;
@@ -104,6 +106,7 @@ function fillBubble(step, index) {
         kerb.className = "kerb";
         brand.appendChild(kerb);
         bubble.appendChild(brand);
+        bubble.appendChild(languageChoice());
     } else {
         const count = document.createElement("p");
         count.className = "tour-count";
@@ -145,6 +148,41 @@ function fillBubble(step, index) {
     bubble.classList.remove("enter");
     void bubble.offsetWidth;
     bubble.classList.add("enter");
+}
+
+// "Dil · Language  [Türkçe] [English]" on the welcome card.
+// Picking a language reloads the page in it (the ?lang= link also remembers it in a cookie).
+function languageChoice() {
+    const box = document.createElement("div");
+    box.className = "tour-langs";
+    const label = document.createElement("p");
+    label.className = "tour-langs-label";
+    label.textContent = tourData.language_label;
+    box.appendChild(label);
+
+    const choices = document.createElement("div");
+    choices.className = "tour-langs-choices";
+    for (const language of tourData.languages) {
+        const active = language.code === document.documentElement.lang;
+        const choice = button("tour-lang" + (active ? " active" : ""), language.name, function () {
+            if (active) {
+                return;
+            }
+            try {
+                sessionStorage.setItem(TOUR_RESUME_KEY, "yes");
+            } catch (error) {
+                // Then the welcome card just comes back after the usual short wait.
+            }
+            const url = new URL(location.href);
+            url.searchParams.set("lang", language.code);
+            location.href = url.toString();
+        });
+        choice.lang = language.code;
+        choice.setAttribute("aria-pressed", active ? "true" : "false");
+        choices.appendChild(choice);
+    }
+    box.appendChild(choices);
+    return box;
 }
 
 function placeTour() {
@@ -311,9 +349,18 @@ if (helpButton) {
     });
 }
 
+let resuming = false;
+try {
+    resuming = sessionStorage.getItem(TOUR_RESUME_KEY) === "yes";
+    sessionStorage.removeItem(TOUR_RESUME_KEY);
+} catch (error) {
+    resuming = false;
+}
+
 const seenSoFar = loadSeen();
 if (seenSoFar !== null && !seenSoFar.includes("*")) {
+    // Right after a language switch the card comes back quickly; otherwise the page gets a moment first.
     setTimeout(function () {
         startWhenCalm(20);
-    }, 1400);
+    }, resuming ? 350 : 1400);
 }

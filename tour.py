@@ -87,6 +87,11 @@ TEXT = {
     },
 }
 
+# The language choice on the welcome card. Each name is written in its own language,
+# so someone who doesn't read the current one still finds theirs.
+LANGUAGES = [("tr", "Türkçe"), ("en", "English")]
+LANGUAGE_LABEL = "Dil · Language"
+
 LABELS = {
     "en": {"start": "Start the tour", "later": "Not now", "next": "Next", "back": "Back", "done": "Done",
            "skip": "Skip", "help": "Show me around"},
@@ -108,4 +113,6 @@ def tour_for(page, lang):
         "help": step("help", ".tour-help", lang),
         "install": step("install", None, lang),
         "labels": LABELS[lang],
+        "languages": [{"code": code, "name": name} for code, name in LANGUAGES],
+        "language_label": LANGUAGE_LABEL,
     }

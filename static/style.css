@@ -2092,6 +2092,35 @@ button.leader:active { transform: scale(0.98); }
 
 .tour-brand .kerb { width: 64px; height: 4px; animation: kerb-run 0.5s linear infinite; }
 
+/* Language choice on the welcome card. */
+.tour-langs { margin: 0 0 20px; }
+.tour-langs-label { margin: 0 0 8px; color: var(--muted); font-size: 12.5px; font-weight: 650; }
+
+.tour-langs-choices {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--surface);
+}
+
+.tour-lang {
+    padding: 8px 18px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 650;
+    cursor: pointer;
+    transition: background 0.25s, color 0.25s;
+}
+
+.tour-lang:hover { color: var(--text); }
+.tour-lang.active { background: var(--accent); color: white; cursor: default; }
+
 .tour-count { margin: 0 0 6px; color: var(--accent); font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .tour-title { margin: 0 0 6px; font-size: 18px; font-weight: 750; font-stretch: 106%; }
 .tour-bubble.center .tour-title { font-size: 24px; }
