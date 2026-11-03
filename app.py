@@ -10,6 +10,7 @@ import ics
 import motogp
 import people
 import season_results
+import tour
 import wsbk
 from core import add_statuses
 
@@ -310,6 +311,8 @@ def render_page(template, lang, **context):
         series_list=list(SERIES.values()),
         default_series=SERIES[DEFAULT_SERIES],
         this_year=datetime.now().year,
+        # The intro tour for this page (texts in tour.py, shown by static/tour.js).
+        tour=tour.tour_for(context.get("page"), lang),
         **context,
     )
     response = make_response(html)

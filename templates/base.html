@@ -40,6 +40,7 @@
                 <a href="?lang=en" class="{% if lang == 'en' %}active{% endif %}">EN</a>
                 <a href="?lang=tr" class="{% if lang == 'tr' %}active{% endif %}">TR</a>
             </nav>
+            <button type="button" class="tour-help" aria-label="{{ tour.labels.help }}" title="{{ tour.labels.help }}">?</button>
         </div>
     </header>
 
@@ -136,5 +137,8 @@
 
     <script src="{{ url_for('static', filename='site.js') }}"></script>
     {% block scripts %}{% endblock %}
+    {# Texts for the intro tour. "tojson" makes them safe to put inside the page. #}
+    <script type="application/json" id="tour-data">{{ tour | tojson }}</script>
+    <script src="{{ url_for('static', filename='tour.js') }}"></script>
 </body>
 </html>

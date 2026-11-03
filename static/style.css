@@ -2015,6 +2015,122 @@ button.leader:active { transform: scale(0.98); }
     55%, 100% { transform: translateX(100%); }
 }
 
+/* ---------- Intro tour ---------- */
+
+.tour-help {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 750;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background 0.2s, transform 0.3s var(--ease-spring);
+}
+
+.langs + .tour-help { margin-left: -12px; }
+.tour-help:hover { color: var(--text); border-color: var(--text); background: var(--raise); transform: scale(1.08); }
+
+/* Catches every click on the page while the tour is open. */
+.tour-blocker { position: fixed; inset: 0; z-index: 300; }
+
+/* The highlight: a see-through box with a huge dark shadow around it. */
+.tour-hole {
+    position: fixed;
+    z-index: 301;
+    border-radius: 16px;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 80%, white), 0 0 0 9999px rgba(6, 7, 11, 0.74);
+    pointer-events: none;
+    animation: fade-in 0.35s both;
+    transition: left 0.45s var(--ease-out), top 0.45s var(--ease-out), width 0.45s var(--ease-out),
+        height 0.45s var(--ease-out), border-radius 0.45s var(--ease-out);
+}
+
+.tour-hole.closed { box-shadow: 0 0 0 9999px rgba(6, 7, 11, 0.8); }
+
+.tour-bubble {
+    position: fixed;
+    z-index: 302;
+    width: min(360px, calc(100vw - 32px));
+    padding: 18px 18px 14px;
+    border: 1px solid var(--line-strong);
+    border-radius: 18px;
+    background: var(--raise);
+    box-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.9);
+    transition: top 0.45s var(--ease-out), left 0.45s var(--ease-out);
+}
+
+.tour-bubble.enter { animation: rise 0.4s var(--ease-out) both; }
+.tour-bubble.center { width: min(440px, calc(100vw - 32px)); padding: 30px 28px 22px; text-align: center; }
+.tour-bubble.center .tour-actions { justify-content: center; }
+.tour-bubble.center .tour-skip { margin-right: 0; }
+
+.tour-blocker.leaving,
+.tour-hole.leaving,
+.tour-bubble.leaving { animation: fade-out 0.3s both; pointer-events: none; }
+
+.tour-brand {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 18px;
+    font-size: 30px;
+    font-weight: 800;
+    font-stretch: 112%;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    line-height: 1;
+}
+
+.tour-brand .kerb { width: 64px; height: 4px; animation: kerb-run 0.5s linear infinite; }
+
+.tour-count { margin: 0 0 6px; color: var(--accent); font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tour-title { margin: 0 0 6px; font-size: 18px; font-weight: 750; font-stretch: 106%; }
+.tour-bubble.center .tour-title { font-size: 24px; }
+.tour-text { margin: 0; color: color-mix(in srgb, var(--text) 82%, var(--muted)); font-size: 14.5px; line-height: 1.55; }
+
+.tour-actions { display: flex; align-items: center; gap: 8px; margin-top: 18px; }
+
+.tour-skip {
+    margin-right: auto;
+    padding: 8px 4px;
+    border: 0;
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    font-size: 13.5px;
+    cursor: pointer;
+}
+
+.tour-skip:hover { color: var(--text); }
+
+.tour-back,
+.tour-next {
+    padding: 9px 16px;
+    border: 0;
+    border-radius: 999px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 650;
+    cursor: pointer;
+    transition: transform 0.25s var(--ease-spring), filter 0.2s;
+}
+
+.tour-back { background: var(--line-strong); color: var(--text); }
+.tour-next { background: var(--accent); color: white; }
+.tour-back:hover,
+.tour-next:hover { filter: brightness(1.12); transform: translateY(-1px); }
+.tour-back:active,
+.tour-next:active { transform: scale(0.96); }
+
 /* ---------- Favourite driver ---------- */
 
 .fav-toggle {
@@ -2439,6 +2555,7 @@ tr.is-fav:hover { background: color-mix(in srgb, var(--gold) 10%, transparent); 
 @media (max-width: 520px) {
     .topbar-inner { flex-wrap: wrap; row-gap: 6px; padding-bottom: 8px; }
     .langs { margin-left: auto; }
+    .langs + .tour-help { margin-left: -4px; }
 
     .series-nav {
         order: 3;
