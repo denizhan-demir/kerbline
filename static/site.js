@@ -301,10 +301,15 @@ function birthText(isoDate) {
     return date + " · " + driverDialog.dataset.age.replace("{age}", age);
 }
 
-function showDriverInfo(info) {
-    const bio = driverPart(".driver-bio");
-    const credit = driverPart(".driver-credit");
-    const facts = driverPart(".driver-facts");
+// root: where the photo, bio and facts go — the driver panel, or the driver page (driver.js).
+function showDriverInfo(info, root) {
+    root = root || driverDialog;
+    function part(selector) {
+        return root.querySelector(selector);
+    }
+    const bio = part(".driver-bio");
+    const credit = part(".driver-credit");
+    const facts = part(".driver-facts");
     bio.textContent = "";
     credit.textContent = "";
     facts.textContent = "";
@@ -317,7 +322,7 @@ function showDriverInfo(info) {
         return;
     }
 
-    driverPart(".driver-desc").textContent = info.description || "";
+    part(".driver-desc").textContent = info.description || "";
 
     if (info.born) {
         addFact(facts, driverDialog.dataset.born, birthText(info.born));
@@ -345,8 +350,8 @@ function showDriverInfo(info) {
     }
 
     if (info.photo) {
-        const box = driverPart(".driver-photo");
-        const img = driverPart(".driver-photo img");
+        const box = part(".driver-photo");
+        const img = part(".driver-photo img");
         img.onload = function () {
             box.classList.add("loaded");
         };
@@ -395,6 +400,14 @@ async function openDriver(button) {
     driverPart(".driver-bio").innerHTML = '<div class="skeleton"><span></span><span></span><span></span></div>';
     driverPart(".driver-credit").textContent = "";
     showFavouriteButton(series === "" ? null : getFavourite(series) === data.name);
+
+    // Link to the driver's own page (needs a season, so not on the home page).
+    const pageLink = driverPart(".driver-page-link");
+    const season = document.body.dataset.season;
+    pageLink.hidden = !(series && season && data.slug);
+    if (!pageLink.hidden) {
+        pageLink.href = "/" + series + "/" + season + "/driver/" + data.slug + "?lang=" + document.documentElement.lang;
+    }
     driverPanel.open();
 
     const info = await fetchDriver(series, data.name);

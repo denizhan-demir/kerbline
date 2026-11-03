@@ -8,6 +8,7 @@ import f1
 import ics
 import motogp
 import people
+import season_results
 import wsbk
 from core import add_statuses
 
@@ -111,6 +112,22 @@ TRANSLATIONS = {
         "fav_add": "Add to favourites",
         "fav_on": "Your favourite",
         "favourite": "Your favourite",
+        "title_fight": "Title fight",
+        "chart_loading": "Drawing the chart…",
+        "chart_slow": "The first time this can take a little while.",
+        "no_races_yet": "No races finished yet this season.",
+        "driver_page": "Driver page",
+        "points_by_round": "Points per round",
+        "season_results": "Race by race",
+        "gap_to_leader": "Behind leader",
+        "podiums": "Podiums",
+        "best_finish": "Best finish",
+        "career": "Career",
+        "starts": "Races",
+        "poles": "Poles",
+        "titles": "Titles",
+        "about": "About",
+        "Sprint": "Sprint",
     },
     "tr": {
         "site_name": "Kerbline",
@@ -196,6 +213,22 @@ TRANSLATIONS = {
         "fav_add": "Favorilere ekle",
         "fav_on": "Favori pilotun",
         "favourite": "Favorin",
+        "title_fight": "Şampiyonluk yarışı",
+        "chart_loading": "Grafik çiziliyor…",
+        "chart_slow": "İlk açılışta biraz sürebilir.",
+        "no_races_yet": "Bu sezon henüz biten yarış yok.",
+        "driver_page": "Pilot sayfası",
+        "points_by_round": "Tur tur puanlar",
+        "season_results": "Yarış yarış sonuçlar",
+        "gap_to_leader": "Lidere fark",
+        "podiums": "Podyum",
+        "best_finish": "En iyi sonuç",
+        "career": "Kariyer",
+        "starts": "Yarış",
+        "poles": "Pole",
+        "titles": "Şampiyonluk",
+        "about": "Hakkında",
+        "Sprint": "Sprint",
     },
 }
 
@@ -212,6 +245,19 @@ def get_series(series_id):
     if series is None:
         abort(404)
     return series
+
+
+@app.template_filter("slug")
+def slug_filter(name):
+    # In templates: {{ row.name | slug }} -> "max-verstappen", used in driver page links.
+    return season_results.slugify(name)
+
+
+def cache_for(season):
+    # Old seasons don't change, the current one does.
+    if season < datetime.now().year:
+        return "public, max-age=86400"
+    return "public, max-age=600"
 
 
 def get_seasons(series, season):
@@ -390,6 +436,76 @@ def race_results(series_id, season, round_number):
         response.headers["Cache-Control"] = "public, max-age=86400"
     else:
         response.headers["Cache-Control"] = "public, max-age=300"
+    return response
+
+
+# ---------- Championship chart and driver pages ----------
+
+@app.route("/<series_id>/<int:season>/progress")
+def progress(series_id, season):
+    series = get_series(series_id)
+    get_seasons(series, season)
+    try:
+        data = season_results.progress(series, season, series.get_standings(season))
+    except Exception:
+        app.logger.exception("Could not load the championship chart")
+        return jsonify({"rounds": [], "lines": []}), 503
+    response = jsonify(data)
+    response.headers["Cache-Control"] = cache_for(season)
+    return response
+
+
+@app.route("/<series_id>/<int:season>/driver/<slug>")
+def driver_page(series_id, season, slug):
+    lang = get_lang()
+    series = get_series(series_id)
+    seasons = get_seasons(series, season)
+    try:
+        drivers = series.get_standings(season)["drivers"]
+    except Exception:
+        app.logger.exception("Could not load standings for the driver page")
+        return error_page(lang)
+
+    row = None
+    for item in drivers:
+        if season_results.slugify(item["name"]) == slug:
+            row = item
+    if row is None:
+        abort(404)
+    gap = float(drivers[0]["points"]) - float(row["points"])
+    return render_page(
+        "driver.html", lang,
+        page="driver", series=series, season=season, seasons=seasons, row=row, slug=slug,
+        gap="%g" % gap,
+    )
+
+
+@app.route("/<series_id>/<int:season>/driver/<slug>/data")
+def driver_data(series_id, season, slug):
+    # The page itself opens right away; this part can take a while the first time, so it loads afterwards.
+    t = TRANSLATIONS[get_lang()]
+    series = get_series(series_id)
+    get_seasons(series, season)
+    try:
+        data = season_results.driver_season(series, season, slug)
+    except Exception:
+        app.logger.exception("Could not load the driver's season")
+        return jsonify({"results": []}), 503
+    if data is None:
+        return jsonify({"results": [], "labels": [], "stats": None, "career": None})
+
+    career = None
+    if series.ID == "f1" and data["driver"].get("id"):
+        try:
+            career = season_results.f1_career(data["driver"]["id"])
+        except Exception:
+            app.logger.exception("Could not load the career numbers")
+
+    labels = []
+    for label in data["labels"]:
+        labels.append({"key": label, "text": t.get(label, label)})
+    response = jsonify({"results": data["results"], "labels": labels, "stats": data["stats"], "career": career})
+    response.headers["Cache-Control"] = cache_for(season)
     return response
 
 

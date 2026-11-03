@@ -1586,6 +1586,254 @@ button.leader:active { transform: scale(0.98); }
     to { opacity: 1; transform: none; }
 }
 
+/* ---------- Charts ---------- */
+
+.chart-card {
+    margin: 30px 0 8px;
+    padding: 22px 24px 18px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    animation: card-in 0.7s 0.25s var(--ease-out) both;
+}
+
+.chart-title { margin: 0 0 14px; font-size: 17px; font-weight: 750; font-stretch: 108%; }
+.chart-body { position: relative; min-height: 120px; }
+.chart-wait .note { margin-top: 6px; }
+
+.line-chart {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    touch-action: pan-y;
+    font-family: var(--font);
+}
+
+.line-chart .grid { stroke: var(--line); stroke-width: 1; }
+.line-chart .axis { fill: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+.line-chart .flag { font-size: 12px; }
+
+.line-chart .line {
+    fill: none;
+    stroke-width: 2.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.line-chart .line.dashed { stroke-dasharray: 7 5; }
+.line-chart .guide { stroke: var(--line-strong); stroke-width: 1; stroke-dasharray: 3 3; }
+
+.line-chart .end-label { font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.line-chart .end-label.later { animation: fade-in 0.5s both; animation-delay: calc(1.1s + var(--k, 0) * 60ms); }
+.line-chart a:hover .end-label { text-decoration: underline; }
+
+.chart-tip {
+    position: absolute;
+    top: 6px;
+    z-index: 2;
+    min-width: 160px;
+    padding: 10px 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--raise) 94%, transparent);
+    box-shadow: 0 16px 34px -18px rgba(0, 0, 0, 0.9);
+    font-size: 12.5px;
+    pointer-events: none;
+}
+
+.chart-tip p { display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 8px; margin: 3px 0; }
+.chart-tip .chart-tip-head { display: block; margin: 0 0 6px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+.chart-tip i { width: 8px; height: 8px; border-radius: 50%; }
+.chart-tip b { font-variant-numeric: tabular-nums; }
+
+/* Points per round: one bar for every round. */
+.bars {
+    display: grid;
+    grid-template-columns: repeat(var(--count), minmax(0, 1fr));
+    gap: 6px;
+    height: 220px;
+}
+
+.bars.many { gap: 3px; }
+
+.bar-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    min-width: 0;
+    border-radius: 8px;
+    outline: none;
+}
+
+.bar-value {
+    color: var(--muted);
+    font-size: 11.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    animation: fade-in 0.4s both;
+    animation-delay: calc(0.6s + var(--i, 0) * 40ms);
+}
+
+.bar {
+    width: 100%;
+    max-width: 36px;
+    height: calc(var(--h) * 0.82);
+    min-height: 3px;
+    border-radius: 6px 6px 3px 3px;
+    background: linear-gradient(180deg, var(--team), color-mix(in srgb, var(--team) 40%, transparent));
+    transform-origin: bottom;
+    animation: bar-up 0.8s var(--ease-out) both;
+    animation-delay: calc(0.2s + var(--i, 0) * 40ms);
+}
+
+.bar.zero { background: var(--line-strong); }
+.bar-flag { font-size: 14px; line-height: 1; }
+
+/* With many rounds the numbers only show on the bar you point at (or tap). */
+.bars.many .bar-value { opacity: 0; transition: opacity 0.2s; animation: none; }
+.bars.many .bar-flag { font-size: 11px; }
+.bar-col:hover .bar-value,
+.bar-col:focus .bar-value { opacity: 1; color: var(--text); }
+.bar-col:hover .bar { filter: brightness(1.2); }
+
+@keyframes bar-up {
+    from { transform: scaleY(0); }
+    to { transform: none; }
+}
+
+/* ---------- Driver page ---------- */
+
+.driver-hero {
+    position: relative;
+    margin-bottom: 8px;
+    padding: 24px 28px 28px;
+    border: 1px solid var(--line);
+    border-radius: 26px;
+    background:
+        radial-gradient(620px 300px at 0% 0%, color-mix(in srgb, var(--team) 26%, transparent), transparent 70%),
+        var(--surface);
+    overflow: hidden;
+    animation: card-in 0.7s 0.05s var(--ease-out) both;
+}
+
+.back-link {
+    display: inline-flex;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.back-link:hover { color: var(--text); }
+
+.driver-hero-main { display: flex; align-items: center; gap: 24px; margin-top: 20px; }
+.driver-hero .driver-photo { width: 128px; height: 128px; animation: photo-in 0.7s 0.15s var(--ease-spring) both; }
+.driver-hero .driver-initials { font-size: 42px; }
+
+.driver-hero-name {
+    margin: 4px 0 0;
+    font-size: clamp(30px, 5.5vw, 50px);
+    font-weight: 800;
+    font-stretch: var(--wide);
+    letter-spacing: -0.025em;
+    line-height: 1.04;
+}
+
+.driver-hero .driver-desc { margin: 6px 0 0; color: var(--muted); }
+.driver-hero .driver-desc:empty { display: none; }
+
+.driver-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 26px;
+}
+
+.driver-tiles > div {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--raise) 88%, transparent);
+    box-shadow: inset 3px 0 0 var(--team, var(--accent));
+    animation: rise 0.5s var(--ease-out) both;
+    animation-delay: calc(var(--n, 0) * 60ms + 200ms);
+}
+
+.driver-tiles b {
+    min-height: 30px;
+    font-size: 30px;
+    font-weight: 750;
+    font-stretch: var(--narrow);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.driver-tiles span { color: var(--muted); font-size: 12.5px; font-weight: 600; }
+
+/* Numbers that are still loading. */
+.driver-tiles b.wait {
+    width: 2.2em;
+    border-radius: 8px;
+    background: linear-gradient(90deg, var(--line) 0%, var(--line-strong) 50%, var(--line) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.3s linear infinite;
+}
+
+.career-tiles { margin-top: 12px; }
+.career-tiles > div { background: var(--surface); border: 1px solid var(--line); box-shadow: none; }
+
+.driver-table .race-name { min-width: 180px; }
+.driver-table .race-cell { text-align: center; }
+
+.pos-chip {
+    display: inline-block;
+    min-width: 40px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: var(--raise);
+    font-size: 12.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+}
+
+.pos-chip.p1 { background: #f5c84c; color: #1c1600; }
+.pos-chip.p2 { background: #c9ccd6; color: #15161c; }
+.pos-chip.p3 { background: #d08a4c; color: #1d1005; }
+.pos-chip.out { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--muted); }
+
+.driver-about { max-width: 720px; }
+.driver-about .driver-facts { margin-top: 4px; }
+
+/* In the driver panel: the way to the full page. */
+.driver-page-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 22px;
+    padding: 10px 18px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--team, var(--accent)) 20%, var(--raise));
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 650;
+    text-decoration: none;
+    transition: background 0.25s;
+    animation: rise 0.5s 0.3s var(--ease-out) both;
+}
+
+.driver-page-link[hidden] { display: none; }
+.driver-page-link span { transition: transform 0.3s var(--ease-spring); }
+.driver-page-link:hover { background: color-mix(in srgb, var(--team, var(--accent)) 32%, var(--raise)); }
+.driver-page-link:hover span { transform: translateX(4px); }
+
 /* ---------- Favourite driver ---------- */
 
 .fav-toggle {
@@ -1974,6 +2222,28 @@ tr.is-fav:hover { background: color-mix(in srgb, var(--gold) 10%, transparent); 
 @media (min-width: 761px) and (max-width: 1080px) {
     .series-name { display: none; }
     .series-nav a { gap: 0; padding: 8px 10px; }
+}
+
+/* ---------- Charts and driver pages on phones ---------- */
+
+@media (max-width: 600px) {
+    .chart-card { padding: 18px 14px 14px; border-radius: 18px; }
+    .bars { height: 180px; }
+    .driver-hero { padding: 20px 18px 22px; border-radius: 22px; }
+    .driver-hero-main { gap: 16px; margin-top: 16px; }
+    .driver-hero .driver-photo { width: 88px; height: 88px; }
+    .driver-hero .driver-initials { font-size: 30px; }
+    .driver-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .driver-tiles > div { padding: 12px; }
+    .driver-tiles b { min-height: 24px; font-size: 24px; }
+    .career-tiles { grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); }
+
+    /* The race-by-race table has to fit a phone without scrolling sideways. */
+    .driver-table th,
+    .driver-table td { padding: 10px 7px; }
+    .driver-table td.pos { width: 34px; }
+    .driver-table .race-name { min-width: 0; font-size: 13.5px; line-height: 1.3; white-space: normal; }
+    .driver-table .pos-chip { min-width: 34px; padding: 3px 6px; font-size: 12px; }
 }
 
 /* ---------- Narrow phones: the series get their own row under the logo ---------- */

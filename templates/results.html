@@ -2,7 +2,7 @@
 <div class="podium">
     {% for driver in drivers %}
     <div class="step p{{ loop.index }}" style="--team: {{ driver.color }}">
-        <button type="button" class="code driver-link" data-name="{{ driver.name }}" data-flag="{{ driver.flag }}" data-team="{{ driver.team }}" data-color="{{ driver.color }}" data-pos="{{ loop.index }}"><span class="flag">{{ driver.flag }}</span>{{ driver.code.split(". ", 1) | last }}</button>
+        <button type="button" class="code driver-link" data-name="{{ driver.name }}" data-slug="{{ driver.name | slug }}" data-flag="{{ driver.flag }}" data-team="{{ driver.team }}" data-color="{{ driver.color }}" data-pos="{{ loop.index }}"><span class="flag">{{ driver.flag }}</span>{{ driver.code.split(". ", 1) | last }}</button>
         <div class="bar">P{{ loop.index }}</div>
     </div>
     {% endfor %}
@@ -28,7 +28,7 @@
                     {% for row in rows %}
                     <tr style="--team: {{ row.color }}; --k: {{ loop.index0 }}">
                         <td class="pos">{{ row.position }}</td>
-                        <td><button type="button" class="driver-link name-link" data-name="{{ row.name }}" data-flag="{{ row.flag }}" data-team="{{ row.team }}" data-color="{{ row.color }}" data-pos="{{ row.position }}"{% if row.points is not none %} data-points="{{ row.points }}"{% endif %}>{{ row.flag }} {{ row.name }}</button></td>
+                        <td><button type="button" class="driver-link name-link" data-name="{{ row.name }}" data-slug="{{ row.name | slug }}" data-flag="{{ row.flag }}" data-team="{{ row.team }}" data-color="{{ row.color }}" data-pos="{{ row.position }}"{% if row.points is not none %} data-points="{{ row.points }}"{% endif %}>{{ row.flag }} {{ row.name }}</button></td>
                         <td class="team-cell">{{ row.team }}</td>
                         <td class="time-cell">{{ row.time }}</td>
                         <td class="pts">{{ row.points }}</td>

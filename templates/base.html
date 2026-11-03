@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body data-locale="{{ 'tr-TR' if lang == 'tr' else 'en-GB' }}" data-tz-yours="{{ t.tz_yours }}" data-tz-track="{{ t.tz_track }}"
-      data-series="{{ series.ID if series else '' }}" data-driver-info="{{ url_for('driver_info') }}">
+      data-series="{{ series.ID if series else '' }}" data-season="{{ season or '' }}" data-driver-info="{{ url_for('driver_info') }}">
     {% set nav_series = series or default_series %}
     {% set nav_season = season or this_year %}
 
@@ -125,6 +125,7 @@
                     <div data-stat="points" style="--n: 1"><b></b><span>{{ t.points }}</span></div>
                     <div data-stat="wins" style="--n: 2"><b></b><span>{{ t.wins }}</span></div>
                 </div>
+                <a class="driver-page-link" href="#" hidden>{{ t.driver_page }}<span aria-hidden="true">→</span></a>
                 <dl class="driver-facts"></dl>
                 <div class="driver-bio"></div>
                 <p class="driver-credit"></p>

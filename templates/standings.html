@@ -3,7 +3,7 @@
 {% block content %}
 {# The data a driver button carries to the driver panel. #}
 {% macro driver_data(row) -%}
-data-name="{{ row.name }}" data-flag="{{ row.flag }}" data-team="{{ row.team }}" data-color="{{ row.color }}" data-pos="{{ row.position }}" data-points="{{ row.points }}"{% if row.wins is not none %} data-wins="{{ row.wins }}"{% endif %}
+data-name="{{ row.name }}" data-slug="{{ row.name | slug }}" data-flag="{{ row.flag }}" data-team="{{ row.team }}" data-color="{{ row.color }}" data-pos="{{ row.position }}" data-points="{{ row.points }}"{% if row.wins is not none %} data-wins="{{ row.wins }}"{% endif %}
 {%- endmacro %}
 
 <section class="page-content">
@@ -29,6 +29,18 @@ data-name="{{ row.name }}" data-flag="{{ row.flag }}" data-team="{{ row.team }}"
         </button>
         {% endfor %}
     </div>
+
+    {# Points after every round for the top drivers, drawn by charts.js. #}
+    <section class="chart-card" id="title-fight" data-url="{{ url_for('progress', series_id=series.ID, season=season) }}"
+             data-round="{{ t.round }}" data-points="{{ t.points }}" data-empty="{{ t.no_races_yet }}" data-error="{{ t.unavailable }}">
+        <h2 class="chart-title">{{ t.title_fight }}</h2>
+        <div class="chart-body">
+            <div class="chart-wait">
+                <div class="skeleton"><span></span><span></span><span></span></div>
+                <p class="note">{{ t.chart_loading }} {{ t.chart_slow }}</p>
+            </div>
+        </div>
+    </section>
 
     {% if standings.drivers | length > 3 %}
     <div class="table-wrap">
@@ -91,4 +103,8 @@ data-name="{{ row.name }}" data-flag="{{ row.flag }}" data-team="{{ row.team }}"
     </div>
     {% endfor %}
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='charts.js') }}"></script>
 {% endblock %}

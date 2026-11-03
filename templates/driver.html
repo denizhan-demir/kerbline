@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}{{ row.name }} · {{ series.NAME }} {{ season }} · {{ t.site_name }}{% endblock %}
+
+{% block header %}
+{% set words = row.name.split() %}
+{% set initials = (words[0][0] ~ (words[-1][0] if words | length > 1 else "")) | upper %}
+<div class="driver-hero" style="--team: {{ row.color }}">
+    <a class="back-link" href="{{ url_for('standings', series_id=series.ID, season=season) }}">
+        <span aria-hidden="true">←</span> {{ series.NAME }} {{ season }} · {{ t.standings }}
+    </a>
+
+    <div class="driver-hero-main">
+        <div class="driver-photo" aria-hidden="true">
+            <span class="driver-initials">{{ initials }}</span>
+            <img alt="" hidden>
+        </div>
+        <div class="driver-heading">
+            <p class="driver-team">{{ row.flag }} {{ row.team }}</p>
+            <h1 class="driver-hero-name">{{ row.name }}</h1>
+            <p class="driver-desc"></p>
+        </div>
+    </div>
+
+    {# The first three come with the page, the rest is filled in by driver.js. #}
+    <div class="driver-tiles">
+        <div style="--n: 0"><b>P{{ row.position }}</b><span>{{ t.pos }}</span></div>
+        <div style="--n: 1"><b class="count-up">{{ row.points }}</b><span>{{ t.points }}</span></div>
+        <div style="--n: 2"><b>{% if gap == "0" %}—{% else %}{{ gap }}{% endif %}</b><span>{% if gap == "0" %}{{ t.leader }}{% else %}{{ t.gap_to_leader }}{% endif %}</span></div>
+        <div style="--n: 3" data-stat="wins"><b class="wait"></b><span>{{ t.wins }}</span></div>
+        <div style="--n: 4" data-stat="podiums"><b class="wait"></b><span>{{ t.podiums }}</span></div>
+        <div style="--n: 5" data-stat="best"><b class="wait"></b><span>{{ t.best_finish }}</span></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="page-content driver-page"
+         data-url="{{ url_for('driver_data', series_id=series.ID, season=season, slug=slug) }}?lang={{ lang }}"
+         data-name="{{ row.name }}" data-color="{{ row.color }}"
+         data-round="{{ t.round }}" data-points="{{ t.points }}" data-empty="{{ t.no_races_yet }}" data-error="{{ t.unavailable }}">
+
+    <section class="chart-card">
+        <h2 class="chart-title">{{ t.points_by_round }}</h2>
+        <div class="chart-body" id="driver-bars">
+            <div class="chart-wait">
+                <div class="skeleton"><span></span><span></span><span></span></div>
+                <p class="note">{{ t.chart_loading }} {{ t.chart_slow }}</p>
+            </div>
+        </div>
+    </section>
+
+    <h2 class="section-title">{{ t.season_results }}</h2>
+    <div class="table-wrap" id="driver-results">
+        <div class="skeleton"><span></span><span></span><span></span></div>
+    </div>
+
+    {% if series.ID == "f1" %}
+    <section id="driver-career" hidden>
+        <h2 class="section-title">{{ t.career }}</h2>
+        <div class="driver-tiles career-tiles">
+            <div style="--n: 0" data-career="starts"><b></b><span>{{ t.starts }}</span></div>
+            <div style="--n: 1" data-career="wins"><b></b><span>{{ t.wins }}</span></div>
+            <div style="--n: 2" data-career="podiums"><b></b><span>{{ t.podiums }}</span></div>
+            <div style="--n: 3" data-career="poles"><b></b><span>{{ t.poles }}</span></div>
+            <div style="--n: 4" data-career="titles"><b></b><span>{{ t.titles }}</span></div>
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="driver-about">
+        <h2 class="section-title">{{ t.about }}</h2>
+        <dl class="driver-facts"></dl>
+        <div class="driver-bio">
+            <div class="skeleton"><span></span><span></span><span></span></div>
+        </div>
+        <p class="driver-credit"></p>
+    </section>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='charts.js') }}"></script>
+<script src="{{ url_for('static', filename='driver.js') }}"></script>
+{% endblock %}
