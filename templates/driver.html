@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.html" import champion_ribbon with context %}
 
 {% block title %}{{ row.name }} · {{ series.NAME }} {{ season }} · {{ t.site_name }}{% endblock %}
 
@@ -21,6 +22,8 @@
             <p class="driver-desc"></p>
         </div>
     </div>
+
+    {% if champion %}<div class="hero-ribbon">{{ champion_ribbon(champion) }}</div>{% endif %}
 
     {# The first three come with the page, the rest is filled in by driver.js. #}
     <div class="driver-tiles">
@@ -82,4 +85,5 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='charts.js') }}"></script>
 <script src="{{ url_for('static', filename='driver.js') }}"></script>
+<script src="{{ url_for('static', filename='celebrate.js') }}"></script>
 {% endblock %}

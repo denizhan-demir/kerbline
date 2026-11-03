@@ -4,6 +4,7 @@ from urllib.parse import quote, unquote
 from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, url_for
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+import champions
 import f1
 import ics
 import motogp
@@ -128,6 +129,15 @@ TRANSLATIONS = {
         "titles": "Titles",
         "about": "About",
         "Sprint": "Sprint",
+        "champion": "Champion",
+        "world_champion": "{season} World Champion",
+        "constructors_champion": "{season} Constructors' Champion",
+        "teams_champion": "{season} Teams' Champion",
+        "manufacturers_champion": "{season} Manufacturers' Champion",
+        "clinched_early": "Title sealed with {n} rounds to go",
+        "clinched_one": "Title sealed with one round to go",
+        "celebrate_again": "Celebrate again",
+        "tap_to_close": "Tap anywhere to close",
     },
     "tr": {
         "site_name": "Kerbline",
@@ -229,6 +239,15 @@ TRANSLATIONS = {
         "titles": "Şampiyonluk",
         "about": "Hakkında",
         "Sprint": "Sprint",
+        "champion": "Şampiyon",
+        "world_champion": "{season} Dünya Şampiyonu",
+        "constructors_champion": "{season} Takımlar Şampiyonu",
+        "teams_champion": "{season} Takımlar Şampiyonu",
+        "manufacturers_champion": "{season} Markalar Şampiyonu",
+        "clinched_early": "Şampiyonluk {n} tur kala kesinleşti",
+        "clinched_one": "Şampiyonluk 1 tur kala kesinleşti",
+        "celebrate_again": "Tekrar kutla",
+        "tap_to_close": "Kapatmak için dokun",
     },
 }
 
@@ -298,6 +317,36 @@ def render_page(template, lang, **context):
     return response
 
 
+def find_champions(series, season, standings, t):
+    # Who has the title for sure, with the text and confetti colours for the celebration.
+    result = {"drivers": None, "groups": {}}
+    try:
+        found = champions.find(series, season, standings)
+    except Exception:
+        app.logger.exception("Could not work out the champions")
+        return result
+
+    left = found["rounds_left"]
+    if left == 1:
+        sub = t["clinched_one"]
+    elif left > 1:
+        sub = t["clinched_early"].format(n=left)
+    else:
+        sub = ""
+
+    def item(kind, row, title_key):
+        return {"kind": kind, "row": row, "title": t[title_key].format(season=season), "sub": sub,
+                "colors": champions.palette(row.get("color"))}
+
+    if found["drivers"]:
+        result["drivers"] = item("drivers", found["drivers"], "world_champion")
+    for title, row in found["groups"].items():
+        # F1 calls its team title the Constructors' Championship.
+        key = "constructors_champion" if series.ID == "f1" and title == "teams" else f"{title}_champion"
+        result["groups"][title] = item(title, row, key)
+    return result
+
+
 def race_sessions(series, season, race):
     # F1 sends every session with the calendar; MotoGP and WorldSBK need one extra request per race.
     if race["sessions"] or not race.get("lazy"):
@@ -364,6 +413,18 @@ def favourite_for(series, season):
     return favourite
 
 
+def champion_for(series, season, lang):
+    # On the home page: this year's champion, once the title is decided.
+    try:
+        standings = series.get_standings(season)
+    except Exception:
+        return None
+    found = find_champions(series, season, {"drivers": standings["drivers"], "groups": []}, TRANSLATIONS[lang])
+    if not found["drivers"]:
+        return None
+    return {"name": found["drivers"]["row"]["name"], "title": found["drivers"]["title"]}
+
+
 @app.route("/")
 def index():
     lang = get_lang()
@@ -374,6 +435,7 @@ def index():
         if getattr(series, "ON_HOME", True):
             item = next_race_for(series, now)
             item["favourite"] = favourite_for(series, now.year)
+            item["champion"] = champion_for(series, now.year, lang)
             upcoming.append(item)
     # Soonest race first; series without a next race go last.
     upcoming.sort(key=lambda item: item["race"]["main"]["when"] if item["race"] else datetime.max.replace(tzinfo=timezone.utc))
@@ -416,6 +478,7 @@ def standings(series_id, season):
     return render_page(
         "standings.html", lang,
         page="standings", series=series, season=season, seasons=seasons, standings=table,
+        champions=find_champions(series, season, table, TRANSLATIONS[lang]),
     )
 
 
@@ -473,10 +536,13 @@ def driver_page(series_id, season, slug):
     if row is None:
         abort(404)
     gap = float(drivers[0]["points"]) - float(row["points"])
+    champion = None
+    if row is drivers[0]:
+        champion = find_champions(series, season, {"drivers": drivers, "groups": []}, TRANSLATIONS[lang])["drivers"]
     return render_page(
         "driver.html", lang,
         page="driver", series=series, season=season, seasons=seasons, row=row, slug=slug,
-        gap="%g" % gap,
+        gap="%g" % gap, champion=champion,
     )
 
 

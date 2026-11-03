@@ -1,0 +1,19 @@
+{# Bits of HTML used on more than one page. Import with: {% from "macros.html" import champion_ribbon with context %} #}
+
+{# The champion's banner. celebrate.js finds it (data-celebrate) and plays the celebration. #}
+{% macro champion_ribbon(item) %}
+{% set colors = item.colors %}
+<div class="champion-ribbon" style="--c1: {{ colors[0] }}; --c2: {{ colors[1] if colors | length > 1 else colors[0] }}"
+     data-celebrate data-kind="{{ item.kind }}" data-key="kerbline-champion-{{ series.ID }}-{{ season }}-{{ item.kind }}"
+     data-auto="{{ 'yes' if season == this_year else '' }}" data-colors="{{ colors | join(',') }}"
+     data-name="{{ item.row.name }}" data-title="{{ item.title }}" data-team="{{ item.row.team or '' }}"
+     data-sub="{{ item.sub }}" data-close="{{ t.tap_to_close }}">
+    <span class="ribbon-trophy" aria-hidden="true">🏆</span>
+    <span class="ribbon-text">
+        <span class="ribbon-title">{{ item.title }}</span>
+        <span class="ribbon-name">{% if item.row.flag %}{{ item.row.flag }} {% endif %}{{ item.row.name }}</span>
+        {% if item.sub %}<span class="ribbon-sub">{{ item.sub }}</span>{% endif %}
+    </span>
+    <button type="button" class="ribbon-replay" aria-label="{{ t.celebrate_again }}">🎉<span>{{ t.celebrate_again }}</span></button>
+</div>
+{% endmacro %}

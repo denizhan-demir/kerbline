@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% from "macros.html" import champion_ribbon with context %}
 
 {% block content %}
 {# The data a driver button carries to the driver panel. #}
 {% macro driver_data(row) -%}
-data-name="{{ row.name }}" data-slug="{{ row.name | slug }}" data-flag="{{ row.flag }}" data-team="{{ row.team }}" data-color="{{ row.color }}" data-pos="{{ row.position }}" data-points="{{ row.points }}"{% if row.wins is not none %} data-wins="{{ row.wins }}"{% endif %}
+data-name="{{ row.name }}" data-slug="{{ row.name | slug }}" data-flag="{{ row.flag }}" data-team="{{ row.team }}" data-color="{{ row.color }}" data-pos="{{ row.position }}" data-points="{{ row.points }}"{% if row.wins is not none %} data-wins="{{ row.wins }}"{% endif %}{% if row.champion %} data-champion="{{ t.world_champion.format(season=season) }}"{% endif %}
 {%- endmacro %}
 
 <section class="page-content">
@@ -16,11 +17,13 @@ data-name="{{ row.name }}" data-slug="{{ row.name | slug }}" data-flag="{{ row.f
     {% if standings.drivers %}
     {% set driver_wins = standings.drivers[0].wins is not none %}
     <h2 class="section-title">{{ t[series.PARTICIPANTS] }}</h2>
+    {% if champions.drivers %}{{ champion_ribbon(champions.drivers) }}{% endif %}
 
     <div class="leaders">
         {% for row in standings.drivers[:3] %}
-        <button type="button" class="leader spotlight driver-link" style="--team: {{ row.color }}; --i: {{ loop.index0 }}" {{ driver_data(row) }}>
+        <button type="button" class="leader spotlight driver-link{% if row.champion %} champion{% endif %}" style="--team: {{ row.color }}; --i: {{ loop.index0 }}" {{ driver_data(row) }}>
             <span class="leader-pos">{{ row.position }}</span>
+            {% if row.champion %}<span class="champion-chip">🏆 {{ t.champion }}</span>{% endif %}
             <span class="leader-name">{{ row.flag }} {{ row.name }}</span>
             <span class="leader-team">{{ row.team }}</span>
             <span class="leader-points"><b class="count-up">{{ row.points }}</b> {{ t.points }}</span>
@@ -76,6 +79,7 @@ data-name="{{ row.name }}" data-slug="{{ row.name | slug }}" data-flag="{{ row.f
     {% for group in filled_groups %}
     {% set show_wins = group.rows[0].wins is not none %}
     <h2 class="section-title">{{ t[group.title] }}</h2>
+    {% if champions.groups[group.title] %}{{ champion_ribbon(champions.groups[group.title]) }}{% endif %}
     <div class="table-wrap">
         <table class="standings-table">
             <thead>
@@ -91,7 +95,7 @@ data-name="{{ row.name }}" data-slug="{{ row.name | slug }}" data-flag="{{ row.f
                 <tr style="--team: {{ row.color }}; --pct: {{ row.pct }}%; --k: {{ loop.index0 }}">
                     <td class="pos">{{ row.position }}</td>
                     <td>
-                        <div>{{ row.name }}</div>
+                        <div>{{ row.name }}{% if row.champion %}<span class="champion-chip">🏆 {{ t.champion }}</span>{% endif %}</div>
                         <div class="points-bar"></div>
                     </td>
                     {% if show_wins %}<td class="pts">{{ row.wins }}</td>{% endif %}
@@ -107,4 +111,5 @@ data-name="{{ row.name }}" data-slug="{{ row.name | slug }}" data-flag="{{ row.f
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='charts.js') }}"></script>
+<script src="{{ url_for('static', filename='celebrate.js') }}"></script>
 {% endblock %}

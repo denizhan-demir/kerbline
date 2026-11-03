@@ -515,6 +515,7 @@ h1 {
         "name countdown"
         "meta countdown"
         "next countdown"
+        "champ countdown"
         "fav countdown";
     align-items: end;
     gap: 0 40px;
@@ -1834,6 +1835,186 @@ button.leader:active { transform: scale(0.98); }
 .driver-page-link:hover { background: color-mix(in srgb, var(--team, var(--accent)) 32%, var(--raise)); }
 .driver-page-link:hover span { transform: translateX(4px); }
 
+/* ---------- Champions ---------- */
+
+.champion-ribbon {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 0 0 16px;
+    padding: 16px 18px 16px 20px;
+    border: 1px solid color-mix(in srgb, var(--c1) 50%, var(--line));
+    border-radius: 20px;
+    background:
+        linear-gradient(110deg, color-mix(in srgb, var(--c1) 30%, var(--surface)), color-mix(in srgb, var(--c2) 14%, var(--surface)) 75%);
+    overflow: hidden;
+    animation: card-in 0.7s 0.1s var(--ease-out) both;
+}
+
+/* A soft shine that sweeps over the ribbon now and then. */
+.champion-ribbon::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 35%, rgba(255, 255, 255, 0.09) 48%, transparent 62%);
+    transform: translateX(-100%);
+    animation: sweep 4s 1.2s ease-in-out infinite;
+    pointer-events: none;
+}
+
+.ribbon-trophy { font-size: 34px; line-height: 1; animation: trophy-in 0.9s 0.3s var(--ease-spring) both; }
+.ribbon-text { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
+
+.ribbon-title {
+    color: color-mix(in srgb, var(--c1) 45%, white);
+    font-size: 12px;
+    font-weight: 750;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.ribbon-name { font-size: 20px; font-weight: 780; font-stretch: var(--wide); letter-spacing: -0.01em; }
+.ribbon-sub { color: color-mix(in srgb, var(--text) 70%, transparent); font-size: 13px; }
+
+.ribbon-replay {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 15px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text);
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 650;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.25s, transform 0.3s var(--ease-spring);
+}
+
+.ribbon-replay:hover { background: rgba(255, 255, 255, 0.18); transform: scale(1.04); }
+.ribbon-replay:active { transform: scale(0.95); }
+
+.hero-ribbon { margin-top: 22px; }
+.hero-ribbon .champion-ribbon { margin: 0; }
+
+.champion-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: 8px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--gold) 18%, transparent);
+    color: var(--gold);
+    font-size: 11.5px;
+    font-weight: 700;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.leader.champion {
+    position: relative;
+    border-color: color-mix(in srgb, var(--gold) 55%, var(--line));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--gold) 25%, transparent), 0 26px 50px -30px color-mix(in srgb, var(--gold) 75%, transparent);
+}
+
+.leader.champion .champion-chip { position: absolute; top: 20px; right: 20px; margin: 0; }
+
+.driver-champion { margin: 4px 0 0; color: var(--gold); font-size: 13px; font-weight: 700; }
+.driver-champion[hidden] { display: none; }
+
+.champion-line { grid-area: champ; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 12px 0 0; font-size: 14px; }
+.champion-line .champion-chip { margin: 0; }
+
+/* The celebration that covers the screen. */
+.celebration {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: grid;
+    place-items: center;
+    background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--c1) 30%, rgba(6, 7, 11, 0.6)), rgba(6, 7, 11, 0.88) 70%);
+    opacity: 0;
+    cursor: pointer;
+    transition: opacity 0.4s ease;
+}
+
+.celebration.show { opacity: 1; }
+.celebration canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+.celebration-card {
+    position: relative;
+    z-index: 1;
+    width: min(520px, calc(100vw - 40px));
+    padding: 34px 32px 30px;
+    border: 1px solid color-mix(in srgb, var(--c1) 60%, transparent);
+    border-radius: 28px;
+    background: linear-gradient(160deg, color-mix(in srgb, var(--c1) 42%, #101116), color-mix(in srgb, var(--c2) 22%, #0c0d12));
+    box-shadow: 0 40px 90px -30px color-mix(in srgb, var(--c1) 80%, transparent);
+    overflow: hidden;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(40px) scale(0.75);
+    transition: transform 0.75s var(--ease-spring), opacity 0.4s ease;
+}
+
+.celebration.show .celebration-card { opacity: 1; transform: none; }
+
+/* Kerb stripes in the team colour along the bottom edge. */
+.celebration-card::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 6px;
+    background: repeating-linear-gradient(90deg, var(--c1) 0 16px, #ffffff 16px 32px);
+    background-size: 32px 100%;
+    animation: kerb-run 0.6s linear infinite;
+}
+
+.cel-trophy { display: block; font-size: 66px; line-height: 1; animation: trophy-in 0.9s 0.25s var(--ease-spring) both; }
+
+.cel-title {
+    margin: 16px 0 0;
+    color: color-mix(in srgb, var(--c1) 40%, white);
+    font-size: 13px;
+    font-weight: 750;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    animation: rise 0.6s 0.45s var(--ease-out) both;
+}
+
+.cel-name {
+    margin: 8px 0 4px;
+    font-size: clamp(30px, 7vw, 46px);
+    font-weight: 800;
+    font-stretch: var(--wide);
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+    animation: rise 0.6s 0.55s var(--ease-out) both;
+}
+
+.cel-team,
+.cel-sub { margin: 4px 0 0; color: rgba(255, 255, 255, 0.78); font-size: 15px; animation: rise 0.6s 0.65s var(--ease-out) both; }
+.cel-close { margin: 20px 0 0; color: rgba(255, 255, 255, 0.45); font-size: 12px; animation: fade-in 0.6s 1.4s both; }
+
+@keyframes trophy-in {
+    0% { opacity: 0; transform: scale(0) rotate(-25deg); }
+    70% { opacity: 1; transform: scale(1.2) rotate(6deg); }
+    100% { opacity: 1; transform: none; }
+}
+
+@keyframes sweep {
+    0% { transform: translateX(-100%); }
+    55%, 100% { transform: translateX(100%); }
+}
+
 /* ---------- Favourite driver ---------- */
 
 .fav-toggle {
@@ -2083,7 +2264,7 @@ tr.is-fav:hover { background: color-mix(in srgb, var(--gold) 10%, transparent); 
 
     .hero {
         grid-template-columns: minmax(0, 1fr);
-        grid-template-areas: "label" "name" "meta" "countdown" "next" "fav";
+        grid-template-areas: "label" "name" "meta" "countdown" "next" "champ" "fav";
         padding: 22px 22px 28px;
         border-radius: 24px;
     }
@@ -2237,6 +2418,13 @@ tr.is-fav:hover { background: color-mix(in srgb, var(--gold) 10%, transparent); 
     .driver-tiles > div { padding: 12px; }
     .driver-tiles b { min-height: 24px; font-size: 24px; }
     .career-tiles { grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); }
+
+    .champion-ribbon { gap: 12px; padding: 14px 14px 14px 16px; }
+    .ribbon-trophy { font-size: 28px; }
+    .ribbon-name { font-size: 17px; }
+    .ribbon-replay { padding: 9px 11px; }
+    .ribbon-replay span { display: none; }
+    .leader.champion .champion-chip { top: 16px; right: 16px; }
 
     /* The race-by-race table has to fit a phone without scrolling sideways. */
     .driver-table th,

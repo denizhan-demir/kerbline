@@ -56,6 +56,16 @@
 {% endif %}
 {% endmacro %}
 
+{# "🏆 2026 World Champion · Lando Norris" once the title is decided. #}
+{% macro champion_line(item) %}
+{% if item.champion %}
+<p class="champion-line">
+    <span class="champion-chip">🏆 {{ item.champion.title }}</span>
+    <span class="fav-name">{{ item.champion.name }}</span>
+</p>
+{% endif %}
+{% endmacro %}
+
 {% block content %}
 <section class="page-content">
     {% set featured = upcoming | first %}
@@ -77,6 +87,7 @@
         </div>
         {% if not race.main.tbc %}{{ countdown(race) }}{% endif %}
         {{ next_session(featured) }}
+        {{ champion_line(featured) }}
         {{ favourite_line(featured) }}
     </a>
     {% else %}
@@ -105,6 +116,7 @@
             {% else %}
             <span class="note">{{ t.unavailable }}</span>
             {% endif %}
+            {{ champion_line(item) }}
             {{ favourite_line(item) }}
         </a>
         {% endfor %}

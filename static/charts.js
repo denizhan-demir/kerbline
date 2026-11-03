@@ -157,7 +157,8 @@ function drawLineChart(card, data, animate) {
     if (animate && !chartMotionOff) {
         const start = performance.now();
         function frame(now) {
-            const progress = Math.min(1, (now - start) / 1500);
+            // The first frame can be stamped a hair before "start", so keep it between 0 and 1.
+            const progress = Math.max(0, Math.min(1, (now - start) / 1500));
             curtain.setAttribute("width", width * (1 - Math.pow(1 - progress, 3)));
             if (progress < 1) {
                 requestAnimationFrame(frame);

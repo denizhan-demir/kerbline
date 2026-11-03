@@ -376,6 +376,10 @@ async function openDriver(button) {
     driverDialog.style.setProperty("--team", data.color || "var(--muted)");
     driverDialog.dataset.name = data.name;
     driverPart(".driver-team").textContent = [data.flag, data.team].filter(Boolean).join("  ");
+    // "🏆 2026 World Champion" when the title is decided (set by the standings page).
+    const championLine = driverPart(".driver-champion");
+    championLine.hidden = !data.champion;
+    championLine.textContent = data.champion ? "🏆 " + data.champion : "";
     driverPart("#driver-name").textContent = data.name;
     driverPart(".driver-desc").textContent = "";
     driverPart(".driver-initials").textContent = initials(data.name);
