@@ -77,6 +77,8 @@ function render() {
         }
     }
 
+    renderWeek(now);
+
     const btnYours = document.getElementById("btn-yours");
     const btnTrack = document.getElementById("btn-track");
     if (btnYours && btnTrack) {
@@ -87,6 +89,57 @@ function render() {
         btnTrack.title = document.body.dataset.tzTrack;
         movePill(btnYours.parentElement, "button.active");
     }
+}
+
+// ---------- This week (home page) ----------
+
+// "Today" / "Tomorrow" in the page's language, otherwise the weekday and date.
+function weekDayLabel(utc, timeZone, now) {
+    const options = { year: "numeric", month: "numeric", day: "numeric" };
+    const day = format(utc, timeZone, options);
+    const relative = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+    let label = format(utc, timeZone, DAY_FORMAT);
+    if (day === format(now, timeZone, options)) {
+        label = relative.format(0, "day");
+    } else if (day === format(new Date(now.getTime() + 86400000), timeZone, options)) {
+        label = relative.format(1, "day");
+    }
+    return label.charAt(0).toLocaleUpperCase(locale) + label.slice(1);
+}
+
+function renderWeek(now) {
+    for (const list of document.querySelectorAll(".week-list")) {
+        for (const header of list.querySelectorAll(".week-day")) {
+            header.remove();
+        }
+        let previousDay = "";
+        for (const item of list.querySelectorAll(".week-item")) {
+            const timeZone = mode === "track" ? item.dataset.tz : null;
+            item.querySelector(".week-time").textContent = format(item.dataset.utc, timeZone, TIME_FORMAT);
+            item.classList.toggle("is-past", new Date(item.dataset.utc) < now);
+            // Practice rows that are hidden don't get a day header of their own.
+            if (list.classList.contains("hide-practice") && item.classList.contains("practice")) {
+                continue;
+            }
+            const day = weekDayLabel(item.dataset.utc, timeZone, now);
+            if (day !== previousDay) {
+                const header = document.createElement("li");
+                header.className = "week-day";
+                header.textContent = day;
+                item.before(header);
+                previousDay = day;
+            }
+        }
+    }
+}
+
+for (const toggle of document.querySelectorAll(".week-toggle")) {
+    toggle.addEventListener("click", function () {
+        const list = toggle.parentElement.querySelector(".week-list");
+        const hidden = list.classList.toggle("hide-practice");
+        toggle.textContent = hidden ? toggle.dataset.more : toggle.dataset.less;
+        render();
+    });
 }
 
 // A pill or line that slides to the chosen option.

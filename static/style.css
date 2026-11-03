@@ -1587,6 +1587,80 @@ button.leader:active { transform: scale(0.98); }
     to { opacity: 1; transform: none; }
 }
 
+/* ---------- This week (home page) ---------- */
+
+.week { margin-top: 44px; }
+.week-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: 14px; }
+.week-head .section-title { margin: 0; }
+.week-help { color: var(--muted); font-size: 14px; }
+
+.week-list {
+    margin: 0;
+    padding: 6px 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    list-style: none;
+    animation: card-in 0.7s 0.4s var(--ease-out) both;
+}
+
+.week-day {
+    padding: 14px 20px 6px;
+    color: var(--muted);
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.week-item a {
+    display: grid;
+    grid-template-columns: 52px 46px minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    color: inherit;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+
+.week-item a:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
+.week-time { font-weight: 700; font-variant-numeric: tabular-nums; }
+.week-item .series-short { justify-self: start; }
+.week-what { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; min-width: 0; }
+.week-session { font-weight: 600; }
+.week-race { overflow: hidden; color: var(--muted); font-size: 13.5px; white-space: nowrap; text-overflow: ellipsis; }
+
+/* Races stand out, practice is quieter, finished sessions fade. */
+.week-item:not(.practice) .week-session { font-weight: 750; }
+.week-item.practice .week-session { color: color-mix(in srgb, var(--text) 75%, var(--muted)); }
+.week-item.is-past { opacity: 0.45; }
+.week-list.hide-practice .week-item.practice { display: none; }
+
+.week-toggle {
+    margin-top: 12px;
+    padding: 9px 16px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 650;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.week-toggle:hover { color: var(--text); border-color: var(--text); }
+
+@media (max-width: 600px) {
+    .week-item a { grid-template-columns: 44px 42px minmax(0, 1fr); gap: 10px; padding: 10px 14px; }
+    .week-item .series-short { padding: 3px 6px; font-size: 10.5px; }
+    .week-day { padding: 14px 14px 6px; }
+    .week-what { flex-direction: column; gap: 1px; }
+    .week-race { font-size: 12.5px; max-width: 100%; }
+}
+
 /* ---------- Charts ---------- */
 
 .chart-card {
@@ -1992,6 +2066,7 @@ button.leader:active { transform: scale(0.98); }
 
 .cel-name {
     margin: 8px 0 4px;
+    overflow-wrap: anywhere;
     font-size: clamp(30px, 7vw, 46px);
     font-weight: 800;
     font-stretch: var(--wide);
@@ -2370,6 +2445,12 @@ tr.is-fav:hover { background: color-mix(in srgb, var(--gold) 10%, transparent); 
 @media (max-width: 760px) {
     body { padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
 
+    /* The top bar slides away while you scroll down and comes back when you scroll up (site.js). */
+    .topbar { transition: transform 0.35s var(--ease-out); }
+    html.bar-hidden .topbar { transform: translateY(-100%); }
+    html.touring .topbar,
+    html.sheet-locked .topbar { transform: none; }
+
     .topbar-inner {
         gap: 12px;
         padding: 10px max(18px, env(safe-area-inset-right)) 10px max(18px, env(safe-area-inset-left));
@@ -2541,6 +2622,34 @@ tr.is-fav:hover { background: color-mix(in srgb, var(--gold) 10%, transparent); 
     .subscribe > summary { padding: 9px 12px; }
     .standings-table td { padding: 13px 12px; }
     .leaders { grid-template-columns: minmax(0, 1fr); }
+
+    /* Top 3 on phones: one slim row each instead of three tall cards. */
+    .leaders { gap: 8px; }
+
+    .leader {
+        display: grid;
+        grid-template-columns: 34px minmax(0, 1fr) auto;
+        grid-template-areas:
+            "pos name points"
+            "pos team wins"
+            "pos chip chip"
+            "bar bar bar";
+        align-items: center;
+        column-gap: 12px;
+        row-gap: 2px;
+        padding: 14px 16px 12px;
+    }
+
+    .leader-pos { grid-area: pos; margin: 0; font-size: 32px; }
+    .leader-name,
+    .leader-team { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .leader-name { grid-area: name; font-size: 16px; }
+    .leader-team { grid-area: team; font-size: 12.5px; }
+    .leader-points { grid-area: points; justify-self: end; margin: 0; }
+    .leader-points b { font-size: 24px; }
+    .leader-wins { grid-area: wins; justify-self: end; font-size: 12px; }
+    .leader .points-bar { grid-area: bar; margin-top: 10px; }
+    .leader.champion .champion-chip { position: static; grid-area: chip; justify-self: start; margin-top: 6px; }
 }
 
 /* ---------- Tablets and small laptops: five full names don't fit, so only the short labels ---------- */
@@ -2559,6 +2668,8 @@ tr.is-fav:hover { background: color-mix(in srgb, var(--gold) 10%, transparent); 
     .driver-hero-main { gap: 16px; margin-top: 16px; }
     .driver-hero .driver-photo { width: 88px; height: 88px; }
     .driver-hero .driver-initials { font-size: 30px; }
+    /* Long names ("Fabio Di Giannantonio") must fit next to the photo on small phones. */
+    .driver-hero-name { font-size: clamp(24px, 7.6vw, 34px); font-stretch: 100%; overflow-wrap: anywhere; }
     .driver-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
     .driver-tiles > div { padding: 12px; }
     .driver-tiles b { min-height: 24px; font-size: 24px; }
@@ -2579,6 +2690,14 @@ tr.is-fav:hover { background: color-mix(in srgb, var(--gold) 10%, transparent); 
     .driver-table .pos-chip { min-width: 34px; padding: 3px 6px; font-size: 12px; }
 }
 
+/* ---------- Small phones (iPhone SE and similar) ---------- */
+
+@media (max-width: 380px) {
+    .driver-hero .driver-photo { width: 72px; height: 72px; }
+    .driver-hero .driver-initials { font-size: 26px; }
+    .driver-hero-name { font-size: clamp(21px, 6.9vw, 30px); }
+}
+
 /* ---------- Narrow phones: the series get their own row under the logo ---------- */
 
 @media (max-width: 520px) {
@@ -2593,5 +2712,5 @@ tr.is-fav:hover { background: color-mix(in srgb, var(--gold) 10%, transparent); 
     }
 
     .series-nav a { padding: 2px 0; }
-    .series-short { padding: 6px 13px; font-size: 11.5px; }
+    .series-nav .series-short { padding: 6px 13px; font-size: 11.5px; }
 }

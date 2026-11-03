@@ -29,6 +29,11 @@ DEFAULT_SERIES = f1.ID
 FEED_DETAIL_WINDOW = timedelta(days=45)
 FEED_DETAIL_ROUNDS = 3
 
+# The home page's "This week": every session of every series in the next 7 days.
+WEEK_AHEAD = timedelta(days=7)
+# Practice sessions are hidden at first (there's a button to show them).
+PRACTICE_WORDS = ("Practice", "Warm Up", "Qualifying 1", "FP")
+
 MANIFEST = {
     "name": "Kerbline",
     "short_name": "Kerbline",
@@ -139,6 +144,10 @@ TRANSLATIONS = {
         "clinched_one": "Title sealed with one round to go",
         "celebrate_again": "Celebrate again",
         "tap_to_close": "Tap anywhere to close",
+        "this_week": "This week",
+        "this_week_help": "Every series, in one list",
+        "all_sessions": "Show practice too",
+        "key_sessions": "Main sessions only",
     },
     "tr": {
         "site_name": "Kerbline",
@@ -249,6 +258,10 @@ TRANSLATIONS = {
         "clinched_one": "Şampiyonluk 1 tur kala kesinleşti",
         "celebrate_again": "Tekrar kutla",
         "tap_to_close": "Kapatmak için dokun",
+        "this_week": "Bu hafta",
+        "this_week_help": "Bütün seriler tek listede",
+        "all_sessions": "Antrenmanları da göster",
+        "key_sessions": "Sadece önemli seanslar",
     },
 }
 
@@ -428,6 +441,31 @@ def champion_for(series, season, lang):
     return {"name": found["drivers"]["row"]["name"], "title": found["drivers"]["title"]}
 
 
+def week_program(now):
+    # Sessions of every series (Moto2 and Moto3 too) in the next 7 days, soonest first.
+    items = []
+    for series in SERIES.values():
+        for season in sorted({now.year, (now + WEEK_AHEAD).year}):
+            try:
+                races = series.get_races(season)
+            except Exception:
+                app.logger.exception("Could not load races for this week")
+                continue
+            for race in races:
+                # Only races whose weekend can touch the next 7 days need their sessions loaded.
+                if not now - timedelta(days=1) <= race["main"]["when"] <= now + WEEK_AHEAD + timedelta(days=3):
+                    continue
+                for session in race_sessions(series, season, race):
+                    if session["tbc"] or not now - timedelta(hours=3) <= session["when"] <= now + WEEK_AHEAD:
+                        continue
+                    items.append({
+                        "series": series, "season": season, "race": race, "session": session,
+                        "practice": any(word in session["name"] for word in PRACTICE_WORDS),
+                    })
+    items.sort(key=lambda item: item["session"]["when"])
+    return items
+
+
 @app.route("/")
 def index():
     lang = get_lang()
@@ -442,7 +480,7 @@ def index():
             upcoming.append(item)
     # Soonest race first; series without a next race go last.
     upcoming.sort(key=lambda item: item["race"]["main"]["when"] if item["race"] else datetime.max.replace(tzinfo=timezone.utc))
-    return render_page("home.html", lang, page="home", series=None, upcoming=upcoming)
+    return render_page("home.html", lang, page="home", series=None, upcoming=upcoming, week=week_program(now))
 
 
 @app.route("/<series_id>")

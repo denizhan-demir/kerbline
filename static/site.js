@@ -98,6 +98,20 @@ document.addEventListener("keydown", function (event) {
     }
 });
 
+// ---------- Top bar on phones: away while scrolling down, back when scrolling up ----------
+
+let lastScroll = window.scrollY;
+window.addEventListener("scroll", function () {
+    const now = window.scrollY;
+    const moved = now - lastScroll;
+    if (Math.abs(moved) < 6) {
+        return;
+    }
+    // Near the top it always stays; further down it follows the scrolling direction.
+    document.documentElement.classList.toggle("bar-hidden", moved > 0 && now > 140);
+    lastScroll = now;
+}, { passive: true });
+
 // ---------- Panels: shared opening, closing and dragging ----------
 // Used by the race panel (calendar.js) and the driver panel below.
 

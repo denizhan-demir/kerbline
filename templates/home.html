@@ -121,6 +121,33 @@
         </a>
         {% endfor %}
     </div>
+
+    {# This week: all sessions of all series in one list. calendar.js writes the times and day headers. #}
+    {% if week %}
+    <section class="week">
+        <div class="week-head">
+            <h2 class="section-title">{{ t.this_week }}</h2>
+            <span class="week-help">{{ t.this_week_help }}</span>
+        </div>
+        <ol class="week-list hide-practice">
+            {% for item in week %}
+            <li class="week-item{% if item.practice %} practice{% endif %}" data-utc="{{ item.session.utc }}" data-tz="{{ item.race.tz }}">
+                <a href="{{ url_for('calendar', series_id=item.series.ID, season=item.season) }}#round-{{ item.race.round }}">
+                    <span class="week-time"></span>
+                    <span class="series-short">{{ item.series.SHORT }}</span>
+                    <span class="week-what">
+                        <span class="week-session">{{ t.get(item.session.name, item.session.name) }}</span>
+                        <span class="week-race">{{ item.race.flag }} {{ item.race.name }}</span>
+                    </span>
+                </a>
+            </li>
+            {% endfor %}
+        </ol>
+        {% if week | selectattr("practice") | list %}
+        <button type="button" class="week-toggle" data-more="{{ t.all_sessions }}" data-less="{{ t.key_sessions }}">{{ t.all_sessions }}</button>
+        {% endif %}
+    </section>
+    {% endif %}
 </section>
 {% endblock %}
 
