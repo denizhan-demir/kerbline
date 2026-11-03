@@ -105,6 +105,26 @@
     <p class="note">{{ t.not_available.format(season=season) }}</p>
     {% endif %}
 
+    {# Kerbline's prediction for the next race (predict.js fills it in, or hides it if there's nothing to show). #}
+    {% if races %}
+    <section class="predict-card" id="prediction" hidden
+             data-url="{{ url_for('prediction', series_id=series.ID, season=season) }}?lang={{ lang }}"
+             data-season="{{ season }}" data-current="{{ 'yes' if season == this_year else '' }}"
+             data-basis-form="{{ t.basis_form }}" data-basis-grid="{{ t.basis_grid }}"
+             data-record="{{ t.record }}" data-record-past="{{ t.record_past }}"
+             data-pick="{{ t.our_pick }}" data-called="{{ t.called_it }}" data-winner="{{ t.winner_was }}">
+        <div class="predict-head">
+            <span class="predict-icon" aria-hidden="true">🔮</span>
+            <div>
+                <h2 class="chart-title">{{ t.prediction }}</h2>
+                <p class="predict-sub"></p>
+            </div>
+        </div>
+        <ol class="predict-list"></ol>
+        <p class="predict-foot"><span class="predict-record"></span> <span class="predict-fun">{{ t.just_for_fun }}</span></p>
+    </section>
+    {% endif %}
+
     {% set completed = races | selectattr("status", "equalto", "done") | list %}
     {# The next race already has the big card at the top, so the grid starts after it. #}
     {% set remaining = races | rejectattr("status", "equalto", "done") | rejectattr("status", "equalto", "next") | list %}
@@ -164,4 +184,5 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='calendar.js') }}"></script>
+<script src="{{ url_for('static', filename='predict.js') }}"></script>
 {% endblock %}

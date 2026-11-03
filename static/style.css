@@ -515,6 +515,7 @@ h1 {
         "name countdown"
         "meta countdown"
         "next countdown"
+        "pred countdown"
         "champ countdown"
         "fav countdown";
     align-items: end;
@@ -1587,6 +1588,100 @@ button.leader:active { transform: scale(0.98); }
     to { opacity: 1; transform: none; }
 }
 
+/* ---------- Prediction ---------- */
+
+.predict-card {
+    margin: 0 0 30px;
+    padding: 22px 24px 18px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background:
+        radial-gradient(520px 220px at 100% 0%, color-mix(in srgb, #9b5de5 14%, transparent), transparent 70%),
+        var(--surface);
+    animation: card-in 0.7s 0.2s var(--ease-out) both;
+}
+
+.predict-card[hidden] { display: none; }
+.predict-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.predict-head .chart-title { margin: 0; }
+.predict-icon { font-size: 30px; line-height: 1; }
+.predict-sub { margin: 3px 0 0; color: var(--muted); font-size: 13.5px; }
+.predict-sub:empty { display: none; }
+
+.predict-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+
+.predict-row {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    animation: rise 0.5s var(--ease-out) both;
+    animation-delay: calc(0.3s + var(--i, 0) * 70ms);
+}
+
+.predict-rank { color: var(--faint); font-weight: 750; font-variant-numeric: tabular-nums; }
+.predict-body { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.predict-name { align-self: flex-start; font-weight: 700; }
+
+.predict-bar {
+    display: block;
+    width: var(--w);
+    height: 6px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--team) 45%, transparent), var(--team));
+    transform-origin: left;
+    animation: bar-grow 1s var(--ease-out) both;
+    animation-delay: calc(0.4s + var(--i, 0) * 70ms);
+}
+
+.predict-reasons { color: var(--muted); font-size: 12.5px; }
+.predict-reasons:empty { display: none; }
+.predict-chance { font-size: 22px; font-weight: 750; font-stretch: var(--narrow); font-variant-numeric: tabular-nums; }
+.predict-row:first-child .predict-chance { font-size: 28px; }
+
+.predict-foot { margin: 14px 0 0; color: var(--faint); font-size: 12.5px; }
+.predict-record { color: var(--muted); font-weight: 600; }
+.predict-card.only-record .predict-list { display: none; }
+.predict-card.only-record .predict-foot { margin-top: 4px; }
+
+/* In the race panel, above the results. */
+.predict-note {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 14px;
+    margin: 0 0 18px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: var(--raise);
+    font-size: 13.5px;
+    animation: rise 0.4s var(--ease-out) both;
+}
+
+.predict-note.hit b { color: #4dd4ac; }
+.predict-note.miss b { color: var(--muted); }
+
+/* Home page line under the next race. */
+.predict-line { grid-area: pred; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 12px 0 0; font-size: 14px; }
+.predict-line[hidden] { display: none; }
+
+.predict-label {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, #9b5de5 20%, transparent);
+    color: #c9a7ff;
+    font-size: 12px;
+    font-weight: 650;
+}
+
+@media (max-width: 600px) {
+    .predict-card { padding: 18px 16px 14px; border-radius: 18px; }
+    .predict-chance { font-size: 19px; }
+    .predict-row:first-child .predict-chance { font-size: 24px; }
+}
+
 /* ---------- This week (home page) ---------- */
 
 .week { margin-top: 44px; }
@@ -2490,7 +2585,7 @@ tr.is-fav:hover { background: color-mix(in srgb, var(--gold) 10%, transparent); 
 
     .hero {
         grid-template-columns: minmax(0, 1fr);
-        grid-template-areas: "label" "name" "meta" "countdown" "next" "champ" "fav";
+        grid-template-areas: "label" "name" "meta" "countdown" "next" "pred" "champ" "fav";
         padding: 22px 22px 28px;
         border-radius: 24px;
     }

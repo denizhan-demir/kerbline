@@ -421,6 +421,10 @@ async function openRace(card) {
         setupDetails(inner);
     }
     markFavourites();
+    // "Kerbline's pick: Norris · Called it" for races that are over (predict.js).
+    if (typeof addPredictionNote === "function") {
+        addPredictionNote(results, card.dataset.round);
+    }
     render();
 }
 

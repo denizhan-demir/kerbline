@@ -9,6 +9,7 @@ import f1
 import ics
 import motogp
 import people
+import predict
 import season_results
 import tour
 import wsbk
@@ -148,6 +149,17 @@ TRANSLATIONS = {
         "this_week_help": "Every series, in one list",
         "all_sessions": "Show practice too",
         "key_sessions": "Main sessions only",
+        "prediction": "Kerbline prediction",
+        "prediction_short": "Prediction",
+        "who_wins": "Who wins?",
+        "basis_form": "Based on form and the season so far",
+        "basis_grid": "Updated after qualifying",
+        "record": "This season: the favourite won {hits} of {races} races",
+        "record_past": "In {season} the favourite won {hits} of {races} races",
+        "just_for_fun": "Just for fun, not a sure thing.",
+        "our_pick": "Kerbline's pick",
+        "called_it": "Called it",
+        "winner_was": "Winner: {name}",
     },
     "tr": {
         "site_name": "Kerbline",
@@ -262,6 +274,17 @@ TRANSLATIONS = {
         "this_week_help": "Bütün seriler tek listede",
         "all_sessions": "Antrenmanları da göster",
         "key_sessions": "Sadece önemli seanslar",
+        "prediction": "Kerbline tahmini",
+        "prediction_short": "Tahmin",
+        "who_wins": "Kim kazanır?",
+        "basis_form": "Form ve sezon performansına göre",
+        "basis_grid": "Sıralamadan sonra güncellendi",
+        "record": "Bu sezon isabet: {hits}/{races} yarış",
+        "record_past": "{season} isabeti: {hits}/{races} yarış",
+        "just_for_fun": "Eğlence için, kesin bilgi değil.",
+        "our_pick": "Kerbline'ın favorisi",
+        "called_it": "Tuttu",
+        "winner_was": "Kazanan: {name}",
     },
 }
 
@@ -612,6 +635,24 @@ def driver_data(series_id, season, slug):
     for label in data["labels"]:
         labels.append({"key": label, "text": t.get(label, label)})
     response = jsonify({"results": data["results"], "labels": labels, "stats": data["stats"], "career": career})
+    response.headers["Cache-Control"] = cache_for(season)
+    return response
+
+
+# ---------- Prediction ----------
+
+@app.route("/<series_id>/<int:season>/prediction")
+def prediction(series_id, season):
+    # Loaded by static/predict.js after the page is open, like the chart.
+    lang = get_lang()
+    series = get_series(series_id)
+    get_seasons(series, season)
+    try:
+        data = predict.predict(series, season, lang)
+    except Exception:
+        app.logger.exception("Could not make the prediction")
+        return jsonify({}), 503
+    response = jsonify(data)
     response.headers["Cache-Control"] = cache_for(season)
     return response
 

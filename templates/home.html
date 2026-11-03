@@ -56,6 +56,14 @@
 {% endif %}
 {% endmacro %}
 
+{# "🔮 Prediction: Norris 31%" — predict.js fills it in after the page has opened. #}
+{% macro prediction_line(item) %}
+{% if item.race and item.season == this_year %}
+<p class="predict-line" hidden data-url="{{ url_for('prediction', series_id=item.series.ID, season=item.season) }}?lang={{ lang }}"
+   data-label="{{ t.prediction_short }}" data-round="{{ item.race.round }}"></p>
+{% endif %}
+{% endmacro %}
+
 {# "🏆 2026 World Champion · Lando Norris" once the title is decided. #}
 {% macro champion_line(item) %}
 {% if item.champion %}
@@ -87,6 +95,7 @@
         </div>
         {% if not race.main.tbc %}{{ countdown(race) }}{% endif %}
         {{ next_session(featured) }}
+        {{ prediction_line(featured) }}
         {{ champion_line(featured) }}
         {{ favourite_line(featured) }}
     </a>
@@ -111,6 +120,7 @@
             <span class="next-date">{{ race_date(race) }}</span>
             {% if not race.main.tbc %}{{ countdown(race) }}{% endif %}
             {{ next_session(item) }}
+            {{ prediction_line(item) }}
             {% elif item.ok %}
             <span class="note">{{ t.no_next }}</span>
             {% else %}
@@ -153,4 +163,5 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='calendar.js') }}"></script>
+<script src="{{ url_for('static', filename='predict.js') }}"></script>
 {% endblock %}
