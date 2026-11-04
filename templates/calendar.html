@@ -112,7 +112,10 @@
              data-season="{{ season }}" data-current="{{ 'yes' if season == this_year else '' }}"
              data-basis-form="{{ t.basis_form }}" data-basis-grid="{{ t.basis_grid }}"
              data-record="{{ t.record }}" data-record-past="{{ t.record_past }}"
-             data-pick="{{ t.our_pick }}" data-called="{{ t.called_it }}" data-winner="{{ t.winner_was }}">
+             data-pick="{{ t.our_pick }}" data-called="{{ t.called_it }}" data-winner="{{ t.winner_was }}"
+             data-rain="{{ t.rain_chance }}" data-dry="{{ t.dry_expected }}"
+             data-track-street="{{ t.track_street }}" data-track-fast="{{ t.track_fast }}"
+             data-track-technical="{{ t.track_technical }}" data-track-balanced="{{ t.track_balanced }}">
         <div class="predict-head">
             <span class="predict-icon" aria-hidden="true">🔮</span>
             <div>
@@ -120,8 +123,22 @@
                 <p class="predict-sub"></p>
             </div>
         </div>
+        <div class="predict-chips"></div>
+        <div class="predict-wait" hidden>
+            <div class="skeleton"><span></span><span></span><span></span></div>
+            <p class="note">{{ t.prediction_pending }}</p>
+        </div>
         <ol class="predict-list"></ol>
-        <p class="predict-foot"><span class="predict-record"></span> <span class="predict-fun">{{ t.just_for_fun }}</span></p>
+        <details class="predict-how">
+            <summary>{{ t.how_it_works }}</summary>
+            <ul>
+                {% for factor in t.factors %}<li>{{ factor }}</li>{% endfor %}
+            </ul>
+        </details>
+        <p class="predict-foot">
+            <span class="predict-record"></span> <span class="predict-fun">{{ t.just_for_fun }}</span>
+            <span class="predict-credit">{{ t.weather_credit }}: <a href="https://open-meteo.com/" rel="noopener" target="_blank">Open-Meteo.com</a></span>
+        </p>
     </section>
     {% endif %}
 

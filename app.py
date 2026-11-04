@@ -160,6 +160,24 @@ TRANSLATIONS = {
         "our_pick": "Kerbline's pick",
         "called_it": "Called it",
         "winner_was": "Winner: {name}",
+        "prediction_pending": "Working out the prediction… the first time takes up to a minute.",
+        "rain_chance": "☔ {n}% chance of rain",
+        "dry_expected": "☀️ Dry expected",
+        "track_street": "Street circuit",
+        "track_fast": "Fast track",
+        "track_technical": "Twisty track",
+        "track_balanced": "All-round track",
+        "how_it_works": "What does it look at?",
+        "factors": [
+            "The driver's form in the last 5 races",
+            "Their points and wins this season",
+            "How fast their car (or bike) is right now",
+            "F1: how the car does on this kind of track · bikes: how the bike did here last year",
+            "The driver's own record at this circuit",
+            "The weather forecast and how they do in wet races",
+            "After qualifying: the starting grid",
+        ],
+        "weather_credit": "Weather data",
     },
     "tr": {
         "site_name": "Kerbline",
@@ -285,6 +303,24 @@ TRANSLATIONS = {
         "our_pick": "Kerbline'ın favorisi",
         "called_it": "Tuttu",
         "winner_was": "Kazanan: {name}",
+        "prediction_pending": "Tahmin hesaplanıyor… ilk seferde bir dakika kadar sürebilir.",
+        "rain_chance": "☔ Yağmur ihtimali %{n}",
+        "dry_expected": "☀️ Kuru hava bekleniyor",
+        "track_street": "Sokak pisti",
+        "track_fast": "Hızlı pist",
+        "track_technical": "Virajlı pist",
+        "track_balanced": "Dengeli pist",
+        "how_it_works": "Neye bakıyor?",
+        "factors": [
+            "Pilotun son 5 yarıştaki formu",
+            "Bu sezonki puanları ve galibiyetleri",
+            "Aracının (ya da motosikletinin) şu anki hızı",
+            "F1: aracın bu tip pistlerdeki performansı · motosiklet: geçen yıl bu pistteki performansı",
+            "Pilotun bu pistteki geçmişi",
+            "Hava tahmini ve ıslak yarışlardaki sonuçları",
+            "Sıralamadan sonra: start sırası",
+        ],
+        "weather_credit": "Hava durumu verisi",
     },
 }
 
@@ -647,13 +683,17 @@ def prediction(series_id, season):
     lang = get_lang()
     series = get_series(series_id)
     get_seasons(series, season)
-    try:
-        data = predict.predict(series, season, lang)
-    except Exception:
-        app.logger.exception("Could not make the prediction")
-        return jsonify({}), 503
-    response = jsonify(data)
-    response.headers["Cache-Control"] = cache_for(season)
+    data, state = predict.get_prediction(series, season)
+    if state == "failed":
+        return jsonify({"failed": True}), 503
+    if data is None:
+        # Still working on it in the background: predict.js asks again in a few seconds.
+        response = jsonify({"pending": True})
+        response.status_code = 202
+        response.headers["Cache-Control"] = "no-store"
+        return response
+    response = jsonify(predict.for_page(data, lang))
+    response.headers["Cache-Control"] = "public, max-age=300"
     return response
 
 

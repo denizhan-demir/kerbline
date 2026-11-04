@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 import f1
 import motogp
+import tracks
 import wsbk
 from core import flag_for_country, get_cached, to_flag
 
@@ -12,11 +13,13 @@ from core import flag_for_country, get_cached, to_flag
 #
 # The result looks like this for every series:
 # {
-#     "rounds": [{"round": 1, "name": "Australian Grand Prix", "flag": "🇦🇺"}, ...],   # finished rounds only
+#     "rounds": [{"round": 1, "name": "Australian Grand Prix", "flag": "🇦🇺",       # finished rounds only
+#                 "circuit": "albert_park", "lat": -37.8, "lon": 144.97, "start": "2026-03-08T04:00:00Z"}, ...],
 #     "drivers": {
 #         "Max Verstappen": {
 #             "name": ..., "slug": "max-verstappen", "flag": ..., "team": ..., "color": ..., "id": ...,
-#             "rounds": {1: {"races": [{"label": "Sprint", "position": 2, "main": False}, ...], "points": 33}},
+#             "rounds": {1: {"races": [{"label": "Sprint", "position": 2, "main": False}, ...], "points": 33,
+#                            "car": "red_bull"}},   # the car: F1 constructor, MotoGP manufacturer, WorldSBK team
 #         },
 #     },
 # }
@@ -65,9 +68,22 @@ def add_result(drivers, info, round_number, label, position, points, main):
     # The team and colour of the latest race win, in case someone changed teams.
     driver["team"] = info["team"]
     driver["color"] = info["color"]
-    result = driver["rounds"].setdefault(round_number, {"races": [], "points": 0})
+    result = driver["rounds"].setdefault(round_number, {"races": [], "points": 0, "car": info.get("car")})
     result["races"].append({"label": label, "position": position, "main": main})
     result["points"] += points
+
+
+def round_info(series_id, number, name, country, start, words):
+    # A finished round of a motorcycle series, with the circuit it was at (for the prediction).
+    circuit = tracks.moto_circuit(series_id, country, words)
+    flag = wsbk.flag_for(country) if len(country or "") == 3 else to_flag(country or "")
+    return {
+        "round": number, "name": name, "flag": flag,
+        "circuit": circuit[0] if circuit else None,
+        "lat": circuit[1] if circuit else None,
+        "lon": circuit[2] if circuit else None,
+        "start": start,
+    }
 
 
 # ---------- Formula 1 ----------
@@ -103,12 +119,20 @@ def f1_season(season):
     drivers = {}
     for number in sorted(races):
         race = races[number]["race"]
-        country = race["Circuit"]["Location"]["country"]
-        rounds.append({"round": number, "name": race["raceName"], "flag": flag_for_country(country)})
+        circuit = race["Circuit"]
+        location = circuit.get("Location") or {}
+        rounds.append({
+            "round": number, "name": race["raceName"], "flag": flag_for_country(location.get("country", "")),
+            "circuit": circuit.get("circuitId"),
+            "lat": float(location["lat"]) if location.get("lat") else None,
+            "lon": float(location["long"]) if location.get("long") else None,
+            "start": race.get("date", "") + "T" + (race.get("time") or "13:00:00Z"),
+        })
         for label, source, main in (("Sprint", sprints, False), ("Race", races, True)):
             for row in (source.get(number) or {"rows": {}})["rows"].values():
                 info = f1.make_driver(row)
                 info["id"] = row["Driver"]["driverId"]
+                info["car"] = row["Constructor"]["constructorId"]
                 add_result(drivers, info, number, label, f1_position(row), float(row.get("points", 0)), main)
     return {"rounds": rounds, "drivers": drivers}
 
@@ -151,9 +175,12 @@ def moto_season(series, season):
         age = max_age(season, event["date_end"])
         url = f"{motogp.BASE_URL}/results/sessions?eventUuid={event['id']}&categoryUuid={category_uuid}"
         finished = {}
+        race_start = None
         for session in get_cached(url, age):
             if session.get("status") == "FINISHED":
                 finished[motogp.session_label(session)] = session["id"]
+            if motogp.session_label(session) == "Race":
+                race_start = session.get("date")
 
         found = False
         for label, main in (("Sprint", False), ("Race", True)):
@@ -162,11 +189,13 @@ def moto_season(series, season):
             url = f"{motogp.BASE_URL}/results/session/{finished[label]}/classification?test=false"
             for row in get_cached(url, age).get("classification", []):
                 position = row.get("position") or "DNF"
-                add_result(drivers, motogp.make_rider(row), number, label, position, row.get("points") or 0, main)
+                info = motogp.make_rider(row)
+                info["car"] = (row.get("constructor") or {}).get("name")
+                add_result(drivers, info, number, label, position, row.get("points") or 0, main)
                 found = True
         if found:
-            rounds.append({"round": number, "name": motogp.pretty_name(event["name"]),
-                           "flag": to_flag(event["country"]["iso"])})
+            rounds.append(round_info(series.ID, number, motogp.pretty_name(event["name"]), event["country"]["iso"],
+                                     race_start, event["name"]))
     return {"rounds": rounds, "drivers": drivers}
 
 
@@ -187,10 +216,15 @@ def wsbk_season(season):
 
         url = f"{wsbk.EVENTS_URL}/seasons/{season}/rounds/{round_code}/sessions"
         finished = {}
+        race_start = None
         for session in get_cached(url, age).get("data") or []:
             sattrs = session.get("attributes") or {}
-            if wsbk.related_id(session, "category") == wsbk.CATEGORY and sattrs.get("status") == "FINISHED":
+            if wsbk.related_id(session, "category") != wsbk.CATEGORY:
+                continue
+            if sattrs.get("status") == "FINISHED":
                 finished[sattrs.get("short_name")] = sattrs.get("source_id")
+            if sattrs.get("short_name") == "RC1":
+                race_start = sattrs.get("start_date_utc")
 
         found = False
         for code, label in wsbk.RACES.items():
@@ -212,11 +246,14 @@ def wsbk_season(season):
                 else:
                     position = wsbk.STATUS_LABELS.get(rattrs.get("status"), "NC")
                     points = 0
-                add_result(drivers, wsbk.make_rider(row, index, brands), number, label, position, points, True)
+                info = wsbk.make_rider(row, index, brands)
+                info["car"] = info["team"]
+                add_result(drivers, info, number, label, position, points, True)
                 found = True
         if found:
-            rounds.append({"round": number, "name": attrs.get("brief_description") or attrs.get("name", ""),
-                           "flag": wsbk.flag_for(attrs.get("country_iso"))})
+            name = attrs.get("brief_description") or attrs.get("name", "")
+            rounds.append(round_info("wsbk", number, name, attrs.get("country_iso"), race_start,
+                                     name + " " + (attrs.get("name") or "")))
     return {"rounds": rounds, "drivers": drivers}
 
 

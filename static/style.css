@@ -1608,6 +1608,30 @@ button.leader:active { transform: scale(0.98); }
 .predict-sub { margin: 3px 0 0; color: var(--muted); font-size: 13.5px; }
 .predict-sub:empty { display: none; }
 
+.predict-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 12px; }
+.predict-chips:empty { display: none; }
+
+.predict-chip {
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--raise);
+    color: var(--text);
+    font-size: 12.5px;
+    font-weight: 600;
+    animation: fade-in 0.4s 0.3s both;
+}
+
+.predict-chip.rain { background: color-mix(in srgb, #4aa3ff 22%, var(--raise)); }
+.predict-chip.track { color: var(--muted); }
+.predict-wait .note { margin-top: 6px; }
+
+.predict-how { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
+.predict-how summary { color: var(--muted); font-size: 13px; font-weight: 650; cursor: pointer; }
+.predict-how summary:hover { color: var(--text); }
+.predict-how ul { margin: 10px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+.predict-credit { display: block; margin-top: 4px; }
+.predict-credit a { color: var(--muted); }
+
 .predict-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
 
 .predict-row {

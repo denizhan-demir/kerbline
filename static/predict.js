@@ -4,24 +4,42 @@
 // - "Kerbline's pick: Norris · Called it" in the race panel of races that are over
 
 const predictionCache = {};
+const pendingWatchers = {};
 
-function fetchPrediction(url) {
+function wait(ms) {
+    return new Promise(function (resolve) {
+        setTimeout(resolve, ms);
+    });
+}
+
+// The server works the prediction out in the background. Until it's ready it answers 202
+// ("not ready yet"), so we ask again every 3 seconds, for up to 3 minutes.
+async function askUntilReady(url) {
+    for (let attempt = 0; attempt < 60; attempt++) {
+        try {
+            const response = await fetch(url);
+            if (response.status === 202) {
+                for (const watcher of pendingWatchers[url] || []) {
+                    watcher();
+                }
+                await wait(3000);
+                continue;
+            }
+            return response.ok ? await response.json() : null;
+        } catch (error) {
+            await wait(3000);
+        }
+    }
+    return null;
+}
+
+function fetchPrediction(url, onPending) {
     // Every part of the page asks for the same data, so it's only loaded once.
+    if (onPending) {
+        (pendingWatchers[url] = pendingWatchers[url] || []).push(onPending);
+    }
     if (!predictionCache[url]) {
-        const controller = new AbortController();
-        const timer = setTimeout(function () {
-            controller.abort();
-        }, 60000);
-        predictionCache[url] = fetch(url, { signal: controller.signal })
-            .then(function (response) {
-                return response.ok ? response.json() : null;
-            })
-            .catch(function () {
-                return null;
-            })
-            .finally(function () {
-                clearTimeout(timer);
-            });
+        predictionCache[url] = askUntilReady(url);
     }
     return predictionCache[url];
 }
@@ -40,7 +58,35 @@ function recordText(card, record) {
 
 // ---------- The card on the calendar page ----------
 
+// Little chips under the title: the weather and (F1) the kind of track.
+function showChips(card, data) {
+    const chips = card.querySelector(".predict-chips");
+    chips.textContent = "";
+    const texts = [];
+    if (data.weather) {
+        const rain = Math.round(data.weather.rain * 100);
+        let text = rain >= 30 ? card.dataset.rain.replace("{n}", rain) : card.dataset.dry;
+        if (data.weather.temp !== null && data.weather.temp !== undefined) {
+            text += " · " + data.weather.temp + "°C";
+        }
+        texts.push([text, rain >= 30 ? "rain" : "dry"]);
+    }
+    if (data.track_type) {
+        const key = "track" + data.track_type.charAt(0).toUpperCase() + data.track_type.slice(1);
+        if (card.dataset[key]) {
+            texts.push([card.dataset[key], "track"]);
+        }
+    }
+    for (const [text, kind] of texts) {
+        const chip = document.createElement("span");
+        chip.className = "predict-chip " + kind;
+        chip.textContent = text;
+        chips.appendChild(chip);
+    }
+}
+
 function showPredictionCard(card, data) {
+    card.querySelector(".predict-wait").hidden = true;
     const list = card.querySelector(".predict-list");
     const sub = card.querySelector(".predict-sub");
     const record = recordText(card, data.record);
@@ -60,6 +106,7 @@ function showPredictionCard(card, data) {
 
     sub.textContent = `${data.race.flag} ${data.race.name} · `
         + (data.basis === "grid" ? card.dataset.basisGrid : card.dataset.basisForm);
+    showChips(card, data);
 
     const top = data.drivers[0].chance || 1;
     data.drivers.forEach(function (driver, index) {
@@ -107,9 +154,17 @@ function showPredictionCard(card, data) {
 
 const predictionCard = document.getElementById("prediction");
 if (predictionCard) {
-    fetchPrediction(predictionCard.dataset.url).then(function (data) {
+    // While the server is still working, the card shows a "working on it" note.
+    fetchPrediction(predictionCard.dataset.url, function () {
+        if (predictionCard.hidden) {
+            predictionCard.querySelector(".predict-wait").hidden = false;
+            predictionCard.hidden = false;
+        }
+    }).then(function (data) {
         if (data) {
             showPredictionCard(predictionCard, data);
+        } else {
+            predictionCard.hidden = true;
         }
     });
 }
